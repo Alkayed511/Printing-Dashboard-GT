@@ -62,8 +62,8 @@ export const PRINTERS_LIST: PrinterInfo[] = [
     description: 'طباعة مباشرة على الأسطح المسطحة (خشب، أكليريك، فوركس، صاج، زجاج)'
   },
   {
-    id: 'flat samel',
-    nameAr: 'فلات ساميل (FLAT SAMEL)',
+    id: 'flat small',
+    nameAr: 'فلات سمول (FLAT SMALL)',
     nameEn: 'Flatbed Samel / Specialty',
     icon: 'Maximize',
     badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-400 dark:border-cyan-800',

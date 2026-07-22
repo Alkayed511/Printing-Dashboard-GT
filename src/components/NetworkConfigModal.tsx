@@ -36,7 +36,7 @@ export const NetworkConfigModal: React.FC<NetworkConfigModalProps> = ({
     }, 800);
   };
 
-  const samplePrinters = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat samel'];
+  const samplePrinters = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -94,10 +94,19 @@ export const NetworkConfigModal: React.FC<NetworkConfigModalProps> = ({
             
             {/* Date Input */}
             <div>
-              <label className="block text-sm font-semibold text-zinc-200 mb-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-amber-400" />
-                تاريخ مجلد العمل المطلوب
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-zinc-200 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-amber-400" />
+                  تاريخ مجلد العمل المطلوب
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setCurrentDate(`${new Date().getDate()}-${new Date().getMonth() + 1}`)}
+                  className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded-md transition-colors"
+                >
+                  تاريخ اليوم
+                </button>
+              </div>
               <input
                 type="text"
                 placeholder="DD-MM"
@@ -145,7 +154,7 @@ export const NetworkConfigModal: React.FC<NetworkConfigModalProps> = ({
                   │   └── <span className="text-emerald-400">{p}\done</span> \ <span className="text-zinc-500">(الملفات هنا = مكتمل)</span>
                 </div>
               ))}
-              <div className="pl-4 text-zinc-500">├── ... [باقي الطابعات cutter, dtf, flat, flat samel]</div>
+              <div className="pl-4 text-zinc-500">├── ... [باقي الطابعات cutter, dtf, flat, flat small]</div>
             </div>
           </div>
 

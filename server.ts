@@ -18,7 +18,7 @@ let serverConfig: ServerConfig = {
   activePath: 'C:\\PrintNetworkFolder\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`
 };
 
-const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat samel'];
+const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];
 
 // In-memory file database for simulation or sync
 let mockJobs: PrintJob[] = [
@@ -115,7 +115,7 @@ let mockJobs: PrintJob[] = [
   {
     id: 'job-7',
     filename: 'صينية_خشبية_مخصصة_هدية_خاصة.psd',
-    printer: 'flat samel',
+    printer: 'flat small',
     status: 'done',
     sizeBytes: 45000000,
     createdAt: new Date(Date.now() - 1000 * 60 * 210).toISOString(),
@@ -488,7 +488,7 @@ import streamlit as st
 BASE_PATH = r"${serverConfig.basePath.replace(/\\/g, '\\\\')}"
 
 # قائمة أسماء الطابعات المعتمدة لدى المطبعة
-PRINTERS = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat samel']
+PRINTERS = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small']
 
 # أسماء الطابعات باللغة العربية للعرض
 PRINTER_NAMES_AR = {
@@ -498,7 +498,7 @@ PRINTER_NAMES_AR = {
     'cutter': 'كاتر بلوتر (CUTTER)',
     'dtf': 'دي تي إف قماش (DTF)',
     'flat': 'فلات بيد UV (FLAT)',
-    'flat samel': 'فلات ساميل (FLAT SAMEL)'
+    'flat small': 'فلات سمول (FLAT SMALL)'
 }
 
 # ------------------------------------------------------------------------------
@@ -682,7 +682,7 @@ function getPrinterColor(p: PrinterType): string {
     case 'cutter': return '#f43f5e';
     case 'dtf': return '#a855f7';
     case 'flat': return '#6366f1';
-    case 'flat samel': return '#06b6d4';
+    case 'flat small': return '#06b6d4';
     default: return '#6b7280';
   }
 }

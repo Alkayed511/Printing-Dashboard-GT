@@ -49,7 +49,7 @@ export const StreamlitExport: React.FC<StreamlitExportProps> = ({ basePath }) =>
   <div id="app" class="grid"></div>
 
   <script>
-    const PRINTERS = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat samel'];
+    const PRINTERS = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];
     function render() {
       const app = document.getElementById('app');
       app.innerHTML = PRINTERS.map(p => \`

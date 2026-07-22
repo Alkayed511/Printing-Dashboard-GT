@@ -1,4 +1,4 @@
-export type PrinterType = 'eco' | 'solvint' | 'r2r' | 'cutter' | 'dtf' | 'flat' | 'flat samel';
+export type PrinterType = 'eco' | 'solvint' | 'r2r' | 'cutter' | 'dtf' | 'flat' | 'flat small';
 
 export type FileStatus = 'pending' | 'done';
 

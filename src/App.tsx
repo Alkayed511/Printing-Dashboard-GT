@@ -35,8 +35,7 @@ export default function App() {
       const res = await fetch('/api/config');
       if (res.ok) {
         const data = await res.json();
-        const pcDate = `${new Date().getDate()}-${new Date().getMonth() + 1}`;
-        setConfig({ ...data, currentDate: pcDate });
+        setConfig(data);
       }
     } catch (e) {
       console.error('Error fetching config:', e);
@@ -150,7 +149,7 @@ export default function App() {
       cutter: `قص_شعار_شركة_الأمل_${randomNum}_300قطعة.eps`,
       dtf: `طباعة_قميص_شعار_${randomNum}_A3.png`,
       flat: `لوحة_أكريليك_شفافة_${randomNum}_40x30cm.ai`,
-      'flat samel': `هدية_صينية_خشب_${randomNum}_25x25cm.psd`
+      'flat small': `هدية_صينية_خشب_${randomNum}_25x25cm.psd`
     };
 
     handleAddJob({
