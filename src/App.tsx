@@ -35,7 +35,8 @@ export default function App() {
       const res = await fetch('/api/config');
       if (res.ok) {
         const data = await res.json();
-        setConfig(data);
+        const pcDate = `${new Date().getDate()}-${new Date().getMonth() + 1}`;
+        setConfig({ ...data, currentDate: pcDate });
       }
     } catch (e) {
       console.error('Error fetching config:', e);
