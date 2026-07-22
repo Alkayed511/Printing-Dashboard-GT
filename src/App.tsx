@@ -15,7 +15,7 @@ export default function App() {
   const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [config, setConfig] = useState<ServerConfig>({
     basePath: 'C:\\PrintNetworkFolder',
-    currentDate: new Date().toISOString().split('T')[0],
+    currentDate: `${new Date().getDate()}-${new Date().getMonth() + 1}`,
     autoRefreshInterval: 5,
     isRealStorageAvailable: false,
     activePath: ''

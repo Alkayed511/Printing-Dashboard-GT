@@ -12,10 +12,10 @@ app.use(express.json());
 // Default configuration
 let serverConfig: ServerConfig = {
   basePath: 'C:\\PrintNetworkFolder', // Default Windows SMB/Network path
-  currentDate: new Date().toISOString().split('T')[0], // e.g., '2026-07-21'
+  currentDate: `${new Date().getDate()}-${new Date().getMonth() + 1}`, // e.g., '22-7'
   autoRefreshInterval: 5, // 5 seconds default
   isRealStorageAvailable: false,
-  activePath: 'C:\\PrintNetworkFolder\\' + new Date().toISOString().split('T')[0]
+  activePath: 'C:\\PrintNetworkFolder\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`
 };
 
 const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat samel'];
@@ -536,7 +536,7 @@ if custom_base_path:
 
 # اختيار تاريخ اليوم (تلقائي مع إمكانية التغيير)
 selected_date = st.sidebar.date_input("تاريخ اليوم:", datetime.date.today())
-date_folder_name = selected_date.strftime("%Y-%m-%d")
+date_folder_name = f"{selected_date.day}-{selected_date.month}"
 
 # إنشاء المسار الكامل اليومي
 today_dir = os.path.join(BASE_PATH, date_folder_name)

@@ -99,7 +99,8 @@ export const NetworkConfigModal: React.FC<NetworkConfigModalProps> = ({
                 تاريخ مجلد العمل المطلوب
               </label>
               <input
-                type="date"
+                type="text"
+                placeholder="DD-MM"
                 value={currentDate}
                 onChange={(e) => setCurrentDate(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-amber-200 font-mono focus:outline-none focus:border-blue-500"
