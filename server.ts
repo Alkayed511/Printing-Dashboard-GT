@@ -198,7 +198,7 @@ app.get('/api/files', (req: Request, res: Response) => {
       if (fs.existsSync(printerDir)) {
         const entries = fs.readdirSync(printerDir, { withFileTypes: true });
         entries.forEach((entry) => {
-          if (entry.isFile() && !entry.name.startsWith('.') && entry.name.toLowerCase() !== 'thumbs.db') {
+          if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
             const filePath = path.join(printerDir, entry.name);
             const stats = fs.statSync(filePath);
             realJobs.push({
@@ -222,7 +222,7 @@ app.get('/api/files', (req: Request, res: Response) => {
       if (fs.existsSync(doneDir)) {
         const entries = fs.readdirSync(doneDir, { withFileTypes: true });
         entries.forEach((entry) => {
-          if (entry.isFile() && !entry.name.startsWith('.') && entry.name.toLowerCase() !== 'thumbs.db') {
+          if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
             const filePath = path.join(doneDir, entry.name);
             const stats = fs.statSync(filePath);
             realJobs.push({
@@ -587,10 +587,10 @@ else:
         os.makedirs(done_dir, exist_ok=True)
 
         # قراءة الملفات في مجلد الطابعة الرئيسي (قيد الانتظار)
-        pending_files = [f for f in os.listdir(printer_dir) if os.path.isfile(os.path.join(printer_dir, f)) and not f.startswith('.') and f.lower() != 'thumbs.db']
+        pending_files = [f for f in os.listdir(printer_dir) if os.path.isfile(os.path.join(printer_dir, f)) and not f.startswith('.') and 'thumb' not in f.lower() and 'desktop.ini' not in f.lower()]
         
         # قراءة الملفات في مجلد done (مكتمل)
-        done_files = [f for f in os.listdir(done_dir) if os.path.isfile(os.path.join(done_dir, f)) and not f.startswith('.') and f.lower() != 'thumbs.db']
+        done_files = [f for f in os.listdir(done_dir) if os.path.isfile(os.path.join(done_dir, f)) and not f.startswith('.') and 'thumb' not in f.lower() and 'desktop.ini' not in f.lower()]
 
         # تقسيم الشاشة إلى عمودين (Kanban Layout)
         col1, col2 = st.columns(2)

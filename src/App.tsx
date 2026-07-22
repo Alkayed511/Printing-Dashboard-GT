@@ -49,8 +49,14 @@ export default function App() {
       const res = await fetch(`/api/files?date=${config.currentDate}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.jobs) {
-          setJobs(data.jobs);
+        if (data.jobs && Array.isArray(data.jobs)) {
+          const validJobs = data.jobs.filter((j: PrintJob) => {
+            const lowerName = j.filename.toLowerCase();
+            return !lowerName.includes('thumbs.db') && !lowerName.includes('desktop.ini') && !j.filename.startsWith('.');
+          });
+          setJobs(validJobs);
+        } else {
+          setJobs([]);
         }
       }
     } catch (e) {
