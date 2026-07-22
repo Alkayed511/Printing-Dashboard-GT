@@ -1,0 +1,6 @@
+{
+  "name": "لوحة متابعة أوامر الطباعة - Print Shop Kanban",
+  "description": "نظام أتمتة ومتابعة أوامر الطباعة اليومية بين مصمم الطباعة وفني المطبعة عبر المجلدات وقنوات الشبكة",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
