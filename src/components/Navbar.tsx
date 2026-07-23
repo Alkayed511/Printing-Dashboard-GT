@@ -11,7 +11,9 @@ import {
   Layers,
   Settings,
   FileDown,
-  Minus
+  Minus,
+  Bell,
+  BellRing
 } from 'lucide-react';
 import { ServerConfig } from '../types';
 
@@ -27,6 +29,8 @@ interface NavbarProps {
   isRefreshing: boolean;
   totalJobsCount: number;
   pendingJobsCount: number;
+  unacknowledgedCount?: number;
+  onAcknowledgeAlert?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,6 +45,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isRefreshing,
   totalJobsCount,
   pendingJobsCount,
+  unacknowledgedCount = 0,
+  onAcknowledgeAlert,
 }) => {
   const adjustDate = (days: number) => {
     try {
@@ -119,6 +125,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <div className="hidden lg:block w-px h-8 bg-zinc-800 mx-2"></div>
+
+          {/* Notification Bell with Red Cascading Alert Badge */}
+          <button
+            onClick={onAcknowledgeAlert}
+            className={`relative p-2 rounded-lg border transition-all ${
+              unacknowledgedCount > 0
+                ? 'bg-red-600 text-white border-red-500 hover:bg-red-500 shadow-lg shadow-red-600/40 animate-pulse'
+                : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300 hover:text-white'
+            }`}
+            title={unacknowledgedCount > 0 ? `تنبيه: ${unacknowledgedCount} طلب جديد` : 'لا توجد تنبيهات جديدة'}
+          >
+            {unacknowledgedCount > 0 ? (
+              <BellRing className="w-4 h-4 text-white animate-wiggle" />
+            ) : (
+              <Bell className="w-4 h-4 text-zinc-400" />
+            )}
+            {unacknowledgedCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] px-1 bg-yellow-300 text-red-950 text-[11px] font-black rounded-full flex items-center justify-center border border-red-700 shadow font-mono">
+                {unacknowledgedCount}
+              </span>
+            )}
+          </button>
 
           {/* Refresh Button */}
           <button

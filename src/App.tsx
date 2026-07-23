@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PrintJob, PrinterType, FileStatus, ServerConfig } from './types';
 import { Navbar } from './components/Navbar';
 import { KanbanBoard } from './components/KanbanBoard';
@@ -10,9 +10,14 @@ import { NewJobModal } from './components/NewJobModal';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { QuickSimulatorBar } from './components/QuickSimulatorBar';
 import { ExportReportModal } from './components/ExportReportModal';
+import { NewOrderNotification } from './components/NewOrderNotification';
 
 export default function App() {
   const [jobs, setJobs] = useState<PrintJob[]>([]);
+  const [unacknowledgedJobs, setUnacknowledgedJobs] = useState<PrintJob[]>([]);
+  const seenJobIdsRef = useRef<Set<string>>(new Set());
+  const isFirstLoadRef = useRef<boolean>(true);
+
   const [config, setConfig] = useState<ServerConfig>({
     basePath: 'C:\\PrintNetworkFolder',
     currentDate: `${new Date().getDate()}-${new Date().getMonth() + 1}`,
@@ -28,6 +33,13 @@ export default function App() {
   const [selectedPrinterForNewJob, setSelectedPrinterForNewJob] = useState<PrinterType>('eco');
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Acknowledge new order alerts & stop sound
+  const handleAcknowledgeAlert = useCallback(() => {
+    unacknowledgedJobs.forEach((j) => seenJobIdsRef.current.add(j.id));
+    jobs.forEach((j) => seenJobIdsRef.current.add(j.id));
+    setUnacknowledgedJobs([]);
+  }, [jobs, unacknowledgedJobs]);
 
   // Fetch Config
   const fetchConfig = useCallback(async () => {
@@ -50,11 +62,30 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (data.jobs && Array.isArray(data.jobs)) {
-          const validJobs = data.jobs.filter((j: PrintJob) => {
+          const validJobs: PrintJob[] = data.jobs.filter((j: PrintJob) => {
             const lowerName = j.filename.toLowerCase();
             return !lowerName.includes('thumbs.db') && !lowerName.includes('desktop.ini') && !j.filename.startsWith('.');
           });
+
           setJobs(validJobs);
+
+          if (isFirstLoadRef.current) {
+            // Mark all initial jobs as seen on startup
+            validJobs.forEach((j) => seenJobIdsRef.current.add(j.id));
+            isFirstLoadRef.current = false;
+          } else {
+            // Check for new incoming pending jobs
+            const newIncoming = validJobs.filter(
+              (j) => j.status === 'pending' && !seenJobIdsRef.current.has(j.id)
+            );
+            if (newIncoming.length > 0) {
+              setUnacknowledgedJobs((prev) => {
+                const combined = [...newIncoming, ...prev];
+                const unique = Array.from(new Map(combined.map((item) => [item.id, item])).values());
+                return unique;
+              });
+            }
+          }
         } else {
           setJobs([]);
         }
@@ -103,6 +134,10 @@ export default function App() {
 
   // Move Job status (Pending <-> Done)
   const handleMoveJob = async (id: string, targetStatus: FileStatus) => {
+    // If moving job, also mark it as seen
+    seenJobIdsRef.current.add(id);
+    setUnacknowledgedJobs((prev) => prev.filter((j) => j.id !== id));
+
     // Optimistic UI Update
     setJobs((prev) =>
       prev.map((j) => (j.id === id ? { ...j, status: targetStatus, updatedAt: new Date().toISOString() } : j))
@@ -131,7 +166,10 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (data.newJob) {
-          setJobs((prev) => [data.newJob, ...prev]);
+          const newJobObj: PrintJob = data.newJob;
+          setJobs((prev) => [newJobObj, ...prev]);
+          // Add to unacknowledged jobs to trigger cascading alert and sound
+          setUnacknowledgedJobs((prev) => [newJobObj, ...prev]);
         }
       }
     } catch (e) {
@@ -166,6 +204,7 @@ export default function App() {
   // Delete Job
   const handleDeleteJob = async (id: string) => {
     setJobs((prev) => prev.filter((j) => j.id !== id));
+    setUnacknowledgedJobs((prev) => prev.filter((j) => j.id !== id));
     try {
       await fetch(`/api/files/${id}`, { method: 'DELETE' });
     } catch (e) {
@@ -194,6 +233,15 @@ export default function App() {
         isRefreshing={isRefreshing}
         totalJobsCount={jobs.length}
         pendingJobsCount={pendingCount}
+        unacknowledgedCount={unacknowledgedJobs.length}
+        onAcknowledgeAlert={handleAcknowledgeAlert}
+      />
+
+      {/* Cascading Red Notification Banner with Sound */}
+      <NewOrderNotification
+        unacknowledgedJobs={unacknowledgedJobs}
+        onAcknowledge={handleAcknowledgeAlert}
+        onSelectJob={setSelectedJobDetails}
       />
 
       {/* Main Container */}
@@ -231,7 +279,7 @@ export default function App() {
           <span className="font-medium">تحديث تلقائي للمجلدات الشبكية | حالة النظام: متصل وجاهز</span>
         </div>
         <div className="hidden sm:flex items-center gap-4 font-mono font-medium text-zinc-300">
-          <span>المطبعة المركزية - لوحة تحكم المصمم وفني الطباعة</span>
+          <span>لوحة تحكم المصمم وفني الطباعة</span>
           <span>•</span>
           <span>المستخدم: Designer_Main</span>
         </div>
