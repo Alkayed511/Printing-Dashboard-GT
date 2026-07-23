@@ -69,25 +69,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     : PRINTERS_LIST.filter((p) => p.id === selectedPrinterFilter);
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 w-full flex flex-col overflow-hidden min-h-0 gap-2">
       
       {/* Search & High Density Filter Header */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
         
         {/* Search Input */}
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-zinc-400 absolute right-4 top-1/2 -tranzinc-y-1/2" />
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -tranzinc-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="بحث باسم الملف، العميل، نوع الخامة، الأبعاد..."
-            className="w-full bg-zinc-950 border border-zinc-700/80 rounded-lg px-10 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500"
+            className="w-full bg-zinc-950 border border-zinc-700/80 rounded-md pr-9 pl-8 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute left-4 top-1/2 -tranzinc-y-1/2 text-xs text-zinc-400 hover:text-white"
+              className="absolute left-3 top-1/2 -tranzinc-y-1/2 text-xs text-zinc-400 hover:text-white"
             >
               مسح
             </button>
@@ -95,10 +95,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         </div>
 
         {/* Printers Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin text-sm pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin text-xs pb-1 md:pb-0 shrink-0">
           <button
             onClick={() => setSelectedPrinterFilter('ALL')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap transition-all ${
               selectedPrinterFilter === 'ALL'
                 ? 'bg-orange-600 text-white'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -113,7 +113,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <button
                 key={p.id}
                 onClick={() => setSelectedPrinterFilter(p.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono font-bold whitespace-nowrap transition-all ${
                   selectedPrinterFilter === p.id
                     ? 'bg-zinc-100 text-zinc-900'
                     : 'bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700'
@@ -121,7 +121,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               >
                 <span>{p.id.toUpperCase()}</span>
                 {count > 0 && (
-                  <span className="px-1.5 py-0.5 rounded bg-zinc-700/50 text-[11px]">
+                  <span className="px-1 py-0.2 rounded bg-zinc-700/50 text-[10px]">
                     {count}
                   </span>
                 )}
@@ -132,30 +132,30 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
       </div>
 
-      {/* High Density Grid Layout */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* High Density Grid Layout - 4 columns x 2 rows, flex full height */}
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 overflow-hidden min-h-0">
         
-        {/* Productivity Analytics Card (High Density Feature Card) */}
-        <div className="bg-orange-950/20 rounded-xl border border-orange-500/30 flex flex-col p-5 justify-between items-center gap-4 relative shadow-sm min-h-[300px]">
-          <div className="flex items-center justify-between w-full border-b border-orange-500/20 pb-3">
-            <span className="text-sm font-bold text-orange-300 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-orange-400" />
+        {/* Productivity Analytics Card */}
+        <div className="bg-orange-950/20 rounded-lg border border-orange-500/30 flex flex-col p-3 justify-between items-center gap-2 relative shadow-sm h-full min-h-0 overflow-hidden">
+          <div className="flex items-center justify-between w-full border-b border-orange-500/20 pb-2 shrink-0">
+            <span className="text-xs font-bold text-orange-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-orange-400" />
               مؤشر الإنتاجية اليومي
             </span>
-            <span className="text-xs bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-md font-mono">LIVE</span>
+            <span className="text-[10px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded font-mono">LIVE</span>
           </div>
 
-          <div className="flex flex-col items-center justify-center my-auto">
-            <span className="text-5xl font-black text-orange-400 font-mono tracking-tight">
+          <div className="flex flex-col items-center justify-center my-auto py-1">
+            <span className="text-4xl font-black text-orange-400 font-mono tracking-tight">
               {jobs.length > 0 ? Math.round((jobs.filter(j => j.status === 'done').length / jobs.length) * 100) : 0}%
             </span>
-            <span className="text-xs text-orange-300 uppercase tracking-widest mt-2">
+            <span className="text-[11px] text-orange-300 uppercase tracking-wider mt-1">
               نسبة إنجاز الأوامر
             </span>
           </div>
 
-          <div className="w-full space-y-3">
-            <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+          <div className="w-full space-y-2 shrink-0">
+            <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
               <div 
                 className="bg-orange-500 h-full transition-all duration-500" 
                 style={{ 
@@ -164,16 +164,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 w-full text-center text-sm">
-              <div className="bg-zinc-900/80 p-2 rounded-lg border border-zinc-800">
-                <div className="text-xs text-zinc-400 mb-1">قيد الانتظار</div>
-                <div className="text-lg font-bold text-amber-400 font-mono">
+            <div className="grid grid-cols-2 gap-2 w-full text-center text-xs">
+              <div className="bg-zinc-900/80 p-1.5 rounded-md border border-zinc-800">
+                <div className="text-[10px] text-zinc-400 mb-0.5">قيد الانتظار</div>
+                <div className="text-base font-bold text-amber-400 font-mono">
                   {jobs.filter(j => j.status === 'pending').length}
                 </div>
               </div>
-              <div className="bg-zinc-900/80 p-2 rounded-lg border border-zinc-800">
-                <div className="text-xs text-zinc-400 mb-1">مكتمل (done)</div>
-                <div className="text-lg font-bold text-emerald-400 font-mono">
+              <div className="bg-zinc-900/80 p-1.5 rounded-md border border-zinc-800">
+                <div className="text-[10px] text-zinc-400 mb-0.5">مكتمل (done)</div>
+                <div className="text-base font-bold text-emerald-400 font-mono">
                   {jobs.filter(j => j.status === 'done').length}
                 </div>
               </div>
@@ -185,46 +185,45 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {printersToRender.map((printer) => {
           const printerJobs = filteredJobs.filter((j) => j.printer === printer.id);
           const pendingJobs = printerJobs.filter((j) => j.status === 'pending');
-          const doneJobs = printerJobs.filter((j) => j.status === 'done');
 
           return (
             <div 
               key={printer.id}
-              className="bg-zinc-900 rounded-lg border border-zinc-800 flex flex-col overflow-hidden shadow-sm hover:border-zinc-700 transition-colors"
+              className="bg-zinc-900 rounded-lg border border-zinc-800 flex flex-col overflow-hidden shadow-sm hover:border-zinc-700 transition-colors h-full min-h-0"
             >
               {/* Card Header */}
-              <div className="bg-zinc-800 px-4 py-3 border-b border-zinc-700 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-orange-300">
+              <div className="bg-zinc-800 px-3 py-1.5 border-b border-zinc-700 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="font-bold text-xs text-orange-300 font-mono truncate">
                     Printer: {printer.id.toUpperCase()}
                   </span>
-                  <span className="text-xs text-zinc-400">({printer.nameAr})</span>
+                  <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">({printer.nameAr})</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 shrink-0">
                   {onOpenNewJobWithPrinter && (
                     <button
                       onClick={() => onOpenNewJobWithPrinter(printer.id)}
-                      className="p-1.5 hover:bg-zinc-700 rounded-md text-orange-300 transition-colors"
+                      className="p-1 hover:bg-zinc-700 rounded text-orange-300 transition-colors"
                       title="إضافة أمر جديد بهذه الطابعة"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
               </div>
 
               {/* Single Column: Pending Jobs */}
-              <div className="flex flex-col flex-grow overflow-hidden min-h-[300px]">
-                <div className="bg-amber-950/30 text-amber-400 text-xs font-bold px-3 py-2 flex items-center justify-between border-b border-amber-900/30">
+              <div className="flex flex-col flex-1 overflow-hidden min-h-0">
+                <div className="bg-amber-950/30 text-amber-400 text-[11px] font-bold px-2.5 py-1 flex items-center justify-between border-b border-amber-900/30 shrink-0">
                   <span>قيد الانتظار</span>
-                  <span className="bg-amber-500/20 px-1.5 py-0.5 rounded-md font-mono text-amber-300 text-[11px]">
+                  <span className="bg-amber-500/20 px-1.5 py-0.2 rounded font-mono text-amber-300 text-[10px]">
                     {pendingJobs.length}
                   </span>
                 </div>
 
-                <div className="p-2 flex flex-col gap-2 overflow-y-auto max-h-[450px] scrollbar-thin flex-1">
+                <div className="p-1.5 flex flex-col gap-1.5 overflow-y-auto scrollbar-thin flex-1 min-h-0">
                   {pendingJobs.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-zinc-500 italic my-auto">
+                    <div className="p-3 text-center text-xs text-zinc-500 italic my-auto">
                       لا توجد ملفات
                     </div>
                   ) : (

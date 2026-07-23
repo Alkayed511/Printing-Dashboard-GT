@@ -222,7 +222,7 @@ export default function App() {
   const pendingCount = jobs.filter((j) => j.status === 'pending').length;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans pb-20 selection:bg-blue-500 selection:text-white dir-rtl text-right">
+    <div className="h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-blue-500 selection:text-white dir-rtl text-right select-none">
       
       {/* Top Navbar */}
       <Navbar
@@ -251,8 +251,8 @@ export default function App() {
         onSelectJob={setSelectedJobDetails}
       />
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-28">
+      {/* Main Container - Fills screen without outer scrolling */}
+      <main className="flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0">
         {activeTab === 'kanban' && (
           <KanbanBoard
             jobs={jobs}
@@ -267,32 +267,29 @@ export default function App() {
         )}
 
         {activeTab === 'compact' && (
-          <CompactGrid
-            jobs={jobs}
-            onMoveJob={handleMoveJob}
-            onSelectJob={setSelectedJobDetails}
-          />
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <CompactGrid
+              jobs={jobs}
+              onMoveJob={handleMoveJob}
+              onSelectJob={setSelectedJobDetails}
+            />
+          </div>
         )}
 
-        {activeTab === 'stats' && <StatsOverview jobs={jobs} />}
+        {activeTab === 'stats' && (
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <StatsOverview jobs={jobs} />
+          </div>
+        )}
 
-        {activeTab === 'code' && <StreamlitExport basePath={config.basePath} />}
+        {activeTab === 'code' && (
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <StreamlitExport basePath={config.basePath} />
+          </div>
+        )}
       </main>
 
-      {/* High Density Status Footer */}
-      <footer className="h-10 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between px-6 text-xs text-zinc-400 fixed bottom-11 left-0 right-0 z-10 shadow-inner">
-        <div className="flex items-center gap-3">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="font-medium">تحديث تلقائي للمجلدات الشبكية | حالة النظام: متصل وجاهز</span>
-        </div>
-        <div className="hidden sm:flex items-center gap-4 font-mono font-medium text-zinc-300">
-          <span>لوحة تحكم المصمم وفني الطباعة</span>
-          <span>•</span>
-          <span>المستخدم: Designer_Main</span>
-        </div>
-      </footer>
-
-      {/* Quick Interactive Bottom Bar */}
+      {/* Quick Simulator & Status Bar at bottom */}
       <QuickSimulatorBar
         onAddQuickJob={handleAddQuickJob}
         onAutoPoll={fetchFiles}
