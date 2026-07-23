@@ -138,8 +138,6 @@ export default function App() {
     seenJobIdsRef.current.add(id);
     setUnacknowledgedJobs((prev) => prev.filter((j) => j.id !== id));
 
-    const targetJob = jobs.find((j) => j.id === id);
-
     // Optimistic UI Update
     setJobs((prev) =>
       prev.map((j) => (j.id === id ? { ...j, status: targetStatus, updatedAt: new Date().toISOString() } : j))
@@ -149,12 +147,7 @@ export default function App() {
       await fetch('/api/files/move', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          targetStatus,
-          printer: targetJob?.printer,
-          filename: targetJob?.filename,
-        }),
+        body: JSON.stringify({ id, targetStatus }),
       });
     } catch (e) {
       console.error('Error moving file:', e);

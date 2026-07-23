@@ -252,74 +252,43 @@ app.get('/api/files', (req: Request, res: Response) => {
 
 // POST /api/files/move - Move file between pending and done
 app.post('/api/files/move', (req: Request, res: Response) => {
-  const { id, targetStatus, printer: reqPrinter, filename: reqFilename } = req.body as {
-    id: string;
-    targetStatus: FileStatus;
-    printer?: PrinterType;
-    filename?: string;
-  };
-
-  let filename = reqFilename || '';
-  let printer: PrinterType = reqPrinter || 'eco';
-  let foundInMock = false;
+  const { id, targetStatus } = req.body as { id: string; targetStatus: FileStatus };
 
   const jobIndex = mockJobs.findIndex((j) => j.id === id);
   if (jobIndex !== -1) {
-    foundInMock = true;
     mockJobs[jobIndex].status = targetStatus;
     mockJobs[jobIndex].updatedAt = new Date().toISOString();
-    if (!filename) filename = mockJobs[jobIndex].filename;
-    if (!reqPrinter) printer = mockJobs[jobIndex].printer;
-  } else if (id.startsWith('real-')) {
-    for (const p of DEFAULT_PRINTERS) {
-      if (id.startsWith(`real-${p}-done-`)) {
-        printer = p;
-        if (!filename) filename = id.replace(`real-${p}-done-`, '');
-        break;
-      } else if (id.startsWith(`real-${p}-`)) {
-        printer = p;
-        if (!filename) filename = id.replace(`real-${p}-`, '');
-        break;
-      }
-    }
-  }
 
-  // Attempt physical file move on disk
-  const dateDir = path.join(serverConfig.basePath, serverConfig.currentDate);
-  const printerDir = path.join(dateDir, printer);
-  const doneDir = path.join(printerDir, 'done');
+    // If real folder exists, attempt physical rename/move
+    const job = mockJobs[jobIndex];
+    const dateDir = path.join(serverConfig.basePath, serverConfig.currentDate);
+    const printerDir = path.join(dateDir, job.printer);
+    const doneDir = path.join(printerDir, 'done');
 
-  let fileMovedOnDisk = false;
+    try {
+      if (fs.existsSync(printerDir)) {
+        if (!fs.existsSync(doneDir)) fs.mkdirSync(doneDir, { recursive: true });
 
-  try {
-    if (filename) {
-      if (!fs.existsSync(printerDir)) fs.mkdirSync(printerDir, { recursive: true });
-      if (!fs.existsSync(doneDir)) fs.mkdirSync(doneDir, { recursive: true });
+        const fromPath = targetStatus === 'done' 
+          ? path.join(printerDir, job.filename)
+          : path.join(doneDir, job.filename);
 
-      const pendingFilePath = path.join(printerDir, filename);
-      const doneFilePath = path.join(doneDir, filename);
+        const toPath = targetStatus === 'done'
+          ? path.join(doneDir, job.filename)
+          : path.join(printerDir, job.filename);
 
-      if (targetStatus === 'done') {
-        if (fs.existsSync(pendingFilePath)) {
-          fs.renameSync(pendingFilePath, doneFilePath);
-          fileMovedOnDisk = true;
-        }
-      } else if (targetStatus === 'pending') {
-        if (fs.existsSync(doneFilePath)) {
-          fs.renameSync(doneFilePath, pendingFilePath);
-          fileMovedOnDisk = true;
+        if (fs.existsSync(fromPath)) {
+          fs.renameSync(fromPath, toPath);
         }
       }
+    } catch (e) {
+      console.log('Real filesystem move note:', e);
     }
-  } catch (e) {
-    console.error('Real filesystem move error:', e);
+
+    return res.json({ success: true, updatedJob: mockJobs[jobIndex] });
   }
 
-  return res.json({
-    success: true,
-    fileMovedOnDisk,
-    updatedJob: foundInMock ? mockJobs[jobIndex] : undefined,
-  });
+  res.status(404).json({ error: 'Order file not found' });
 });
 
 // POST /api/files/add - Add a new file to queue
