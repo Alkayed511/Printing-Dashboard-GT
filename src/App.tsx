@@ -184,6 +184,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenConfig={() => setIsConfigOpen(true)}
+        onChangeDate={(newDate) => handleSaveConfig({ currentDate: newDate })}
         onOpenNewJob={() => {
           setSelectedPrinterForNewJob('eco');
           setIsNewJobOpen(true);

@@ -10,7 +10,8 @@ import {
   Calendar,
   Layers,
   Settings,
-  FileDown
+  FileDown,
+  Minus
 } from 'lucide-react';
 import { ServerConfig } from '../types';
 
@@ -22,6 +23,7 @@ interface NavbarProps {
   onOpenNewJob: () => void;
   onOpenExport: () => void;
   onRefresh: () => void;
+  onChangeDate: (newDate: string) => void;
   isRefreshing: boolean;
   totalJobsCount: number;
   pendingJobsCount: number;
@@ -35,10 +37,30 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewJob,
   onOpenExport,
   onRefresh,
+  onChangeDate,
   isRefreshing,
   totalJobsCount,
   pendingJobsCount,
 }) => {
+  const adjustDate = (days: number) => {
+    try {
+      const parts = config.currentDate.split('-');
+      if (parts.length === 2) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const dateObj = new Date(new Date().getFullYear(), m - 1, d);
+        dateObj.setDate(dateObj.getDate() + days);
+        onChangeDate(`${dateObj.getDate()}-${dateObj.getMonth() + 1}`);
+      }
+    } catch (e) {
+      console.error('Error adjusting date', e);
+    }
+  };
+
+  const resetToToday = () => {
+    onChangeDate(`${new Date().getDate()}-${new Date().getMonth() + 1}`);
+  };
+
   return (
     <header className="bg-zinc-900 border-b border-zinc-800 text-white sticky top-0 z-30 shadow-md">
       {/* High Density Main Header Bar */}
@@ -73,11 +95,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Today Date */}
-          <div className="hidden lg:flex flex-col items-end mx-2">
-            <span className="text-xs text-zinc-400">تاريخ اليوم</span>
-            <span className="font-mono text-orange-400 font-bold uppercase text-sm dir-ltr">
-              {config.currentDate}
-            </span>
+          <div className="hidden lg:flex items-center mx-2 bg-zinc-950 rounded-lg border border-zinc-800 p-1 shadow-inner">
+            <button
+              onClick={() => adjustDate(-1)}
+              className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+              title="اليوم السابق"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <div className="flex flex-col items-center px-3 min-w-[80px]">
+              <span className="text-[10px] text-zinc-500 font-bold mb-0.5" onClick={resetToToday} title="العودة لليوم" style={{cursor: 'pointer'}}>تاريخ العمل</span>
+              <span className="font-mono text-orange-400 font-bold uppercase text-sm dir-ltr">
+                {config.currentDate}
+              </span>
+            </div>
+            <button
+              onClick={() => adjustDate(1)}
+              className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+              title="اليوم التالي"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="hidden lg:block w-px h-8 bg-zinc-800 mx-2"></div>
