@@ -99,17 +99,28 @@ export const NetworkConfigModal: React.FC<NetworkConfigModalProps> = ({
                   <Calendar className="w-4 h-4 text-amber-400" />
                   تاريخ مجلد العمل المطلوب
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setCurrentDate(`${new Date().getDate()}-${new Date().getMonth() + 1}`)}
-                  className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded-md transition-colors"
-                >
-                  تاريخ اليوم
-                </button>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentDate(`${new Date().getDate()}-${new Date().getMonth() + 1}`)}
+                    className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                    title="تاريخ اليوم بصيغة يوم-شهر (مثال: 23-7)"
+                  >
+                    D-M
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentDate(new Date().toISOString().split('T')[0])}
+                    className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition-colors"
+                    title="تاريخ اليوم بصيغة كاملة (مثال: 2026-07-23)"
+                  >
+                    YYYY-MM-DD
+                  </button>
+                </div>
               </div>
               <input
                 type="text"
-                placeholder="DD-MM"
+                placeholder="23-7 أو 2026-07-23"
                 value={currentDate}
                 onChange={(e) => setCurrentDate(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-amber-200 font-mono focus:outline-none focus:border-blue-500"

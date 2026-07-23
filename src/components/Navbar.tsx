@@ -50,12 +50,44 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const adjustDate = (days: number) => {
     try {
-      const parts = config.currentDate.split('-');
-      if (parts.length === 2) {
-        const d = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        const dateObj = new Date(new Date().getFullYear(), m - 1, d);
-        dateObj.setDate(dateObj.getDate() + days);
+      const dateStr = (config.currentDate || '').trim();
+      const parts = dateStr.split(/[-/]/);
+      let year = new Date().getFullYear();
+      let month = new Date().getMonth() + 1;
+      let day = new Date().getDate();
+
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          year = parseInt(parts[0], 10);
+          month = parseInt(parts[1], 10);
+          day = parseInt(parts[2], 10);
+        } else {
+          // DD-MM-YYYY
+          day = parseInt(parts[0], 10);
+          month = parseInt(parts[1], 10);
+          year = parseInt(parts[2], 10);
+        }
+      } else if (parts.length === 2) {
+        // DD-MM or D-M
+        day = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+      }
+
+      const dateObj = new Date(year, month - 1, day);
+      dateObj.setDate(dateObj.getDate() + days);
+
+      if (parts.length === 3 && parts[0].length === 4) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        onChangeDate(`${y}-${m}-${d}`);
+      } else if (parts.length === 3) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        onChangeDate(`${d}-${m}-${y}`);
+      } else {
         onChangeDate(`${dateObj.getDate()}-${dateObj.getMonth() + 1}`);
       }
     } catch (e) {
@@ -64,7 +96,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const resetToToday = () => {
-    onChangeDate(`${new Date().getDate()}-${new Date().getMonth() + 1}`);
+    if (config.currentDate && config.currentDate.length === 10 && config.currentDate.startsWith('20')) {
+      const todayIso = new Date().toISOString().split('T')[0];
+      onChangeDate(todayIso);
+    } else {
+      onChangeDate(`${new Date().getDate()}-${new Date().getMonth() + 1}`);
+    }
   };
 
   return (

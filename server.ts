@@ -567,7 +567,8 @@ if custom_base_path:
 
 # اختيار تاريخ اليوم (تلقائي مع إمكانية التغيير)
 selected_date = st.sidebar.date_input("تاريخ اليوم:", datetime.date.today())
-date_folder_name = f"{selected_date.day}-{selected_date.month}"
+date_fmt = st.sidebar.radio("تنسيق اسم مجلد التاريخ:", ["يوم-شهر (23-7)", "سنة-شهر-يوم (2026-07-23)"], index=0)
+date_folder_name = selected_date.strftime("%Y-%m-%d") if "2026" in date_fmt else f"{selected_date.day}-{selected_date.month}"
 
 # إنشاء المسار الكامل اليومي
 today_dir = os.path.join(BASE_PATH, date_folder_name)
