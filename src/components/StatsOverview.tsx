@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PrintJob, PrinterType } from '../types';
+import { PrintJob, PrinterInfo } from '../types';
 import { PRINTERS_LIST } from '../data/printers';
 import {
   ResponsiveContainer,
@@ -19,10 +19,7 @@ import {
   CheckCircle2,
   Users,
   Hash,
-  Filter,
-  FileText,
-  Printer,
-  ChevronDown
+  Printer
 } from 'lucide-react';
 
 interface StatsOverviewProps {
@@ -33,22 +30,22 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'done'>('all');
 
   const totalJobs = jobs.length;
-  const pendingJobs = jobs.filter((j) => j.status === 'pending').length;
-  const doneJobs = jobs.filter((j) => j.status === 'done').length;
+  const pendingJobs = jobs.filter((j: PrintJob) => j.status === 'pending').length;
+  const doneJobs = jobs.filter((j: PrintJob) => j.status === 'done').length;
 
   // Unique customers count
   const uniqueCustomers = new Set(
-    jobs.map((j) => j.customerName || 'عميل عام').filter(Boolean)
+    jobs.map((j: PrintJob) => j.customerName || 'عميل عام').filter(Boolean)
   ).size;
 
   // Total quantity
-  const totalQuantity = jobs.reduce((acc, curr) => acc + (curr.quantity || 1), 0);
+  const totalQuantity = jobs.reduce((acc: number, curr: PrintJob) => acc + (curr.quantity || 1), 0);
 
   // Data for Stacked Bar Chart (Printer Performance)
-  const barChartData = PRINTERS_LIST.map((printer) => {
-    const pJobs = jobs.filter((j) => j.printer === printer.id);
-    const doneCount = pJobs.filter((j) => j.status === 'done').length;
-    const pendingCount = pJobs.filter((j) => j.status === 'pending').length;
+  const barChartData = PRINTERS_LIST.map((printer: PrinterInfo) => {
+    const pJobs = jobs.filter((j: PrintJob) => j.printer === printer.id);
+    const doneCount = pJobs.filter((j: PrintJob) => j.status === 'done').length;
+    const pendingCount = pJobs.filter((j: PrintJob) => j.status === 'pending').length;
 
     // Short name for X-Axis
     let shortName = printer.nameAr.split(' ')[0];
@@ -67,8 +64,8 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
   });
 
   // Data for Donut Chart (Orders by Category / Printer)
-  const donutData = PRINTERS_LIST.map((printer) => {
-    const count = jobs.filter((j) => j.printer === printer.id).length;
+  const donutData = PRINTERS_LIST.map((printer: PrinterInfo) => {
+    const count = jobs.filter((j: PrintJob) => j.printer === printer.id).length;
     return {
       name: printer.nameAr.split(' ')[0],
       fullName: printer.nameAr,
@@ -81,7 +78,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
   const displayDonutData =
     donutData.length > 0 && totalJobs > 0
       ? donutData
-      : PRINTERS_LIST.map((p) => ({
+      : PRINTERS_LIST.map((p: PrinterInfo) => ({
           name: p.nameAr.split(' ')[0],
           fullName: p.nameAr,
           value: 1,
@@ -89,7 +86,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
         }));
 
   // Filtered Jobs for Order Log Table
-  const filteredJobs = jobs.filter((job) => {
+  const filteredJobs = jobs.filter((job: PrintJob) => {
     if (filterStatus === 'pending') return job.status === 'pending';
     if (filterStatus === 'done') return job.status === 'done';
     return true;
@@ -98,7 +95,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
   return (
     <div className="space-y-6 dir-rtl text-right">
       
-      {/* 1. TOP METRIC CARDS ROW (5 Cards matching top bar in reference image) */}
+      {/* 1. TOP METRIC CARDS ROW (5 Cards matching reference layout) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
         {/* TOTAL ORDERS */}
@@ -162,7 +159,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Card: Printer Performance (Stacked Bar) - Spans 2 cols */}
-        <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4 min-h-[360px]">
           
           {/* Header Bar */}
           <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
@@ -189,7 +186,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
 
           {/* Bar Chart Container */}
           <div className="h-64 sm:h-72 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                 <XAxis
@@ -207,7 +204,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
                   allowDecimals={false}
                 />
                 <Tooltip
-                  content={({ active, payload, label }) => {
+                  content={({ active, payload, label }: any) => {
                     if (active && payload && payload.length) {
                       const doneVal = payload[0]?.value || 0;
                       const pendingVal = payload[1]?.value || 0;
@@ -235,7 +232,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
         </div>
 
         {/* Right Card: Orders By Category / Printer (Donut Chart) */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4 min-h-[360px]">
           
           {/* Header */}
           <div className="pb-3 border-b border-zinc-800">
@@ -245,7 +242,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
 
           {/* Donut Chart with Center Text */}
           <div className="relative h-52 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Pie
                   data={displayDonutData}
@@ -256,12 +253,12 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
                   paddingAngle={3}
                   dataKey="value"
                 >
-                  {displayDonutData.map((entry, index) => (
+                  {displayDonutData.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.color} stroke="#18181b" strokeWidth={2} />
                   ))}
                 </Pie>
                 <Tooltip
-                  content={({ active, payload }) => {
+                  content={({ active, payload }: any) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
                       return (
@@ -286,8 +283,8 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
 
           {/* Donut Legend below */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800 text-xs">
-            {PRINTERS_LIST.map((printer) => {
-              const pCount = jobs.filter((j) => j.printer === printer.id).length;
+            {PRINTERS_LIST.map((printer: PrinterInfo) => {
+              const pCount = jobs.filter((j: PrintJob) => j.printer === printer.id).length;
               return (
                 <div key={printer.id} className="flex items-center justify-between text-zinc-300 bg-zinc-950/50 p-1.5 rounded-lg border border-zinc-800/60">
                   <div className="flex items-center gap-1.5 truncate">
@@ -304,7 +301,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
 
       </div>
 
-      {/* 3. BOTTOM SECTION: ORDER LOG (Matching bottom table in reference image) */}
+      {/* 3. BOTTOM SECTION: ORDER LOG */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
         
         {/* Table Header & Filter Tabs */}
@@ -314,7 +311,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
             <p className="text-xs text-zinc-400 mt-0.5">قائمة تفصيلية بالأوامر المجدولة لليوم المحدد</p>
           </div>
 
-          {/* Filter Tabs (Matching top right tabs in order log section) */}
+          {/* Filter Tabs */}
           <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs">
             <button
               onClick={() => setFilterStatus('all')}
@@ -371,8 +368,8 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
                   </td>
                 </tr>
               ) : (
-                filteredJobs.map((job) => {
-                  const printerObj = PRINTERS_LIST.find((p) => p.id === job.printer);
+                filteredJobs.map((job: PrintJob) => {
+                  const printerObj = PRINTERS_LIST.find((p: PrinterInfo) => p.id === job.printer);
 
                   return (
                     <tr key={job.id} className="hover:bg-zinc-800/40 transition-colors">
