@@ -105,50 +105,119 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="bg-zinc-900 border-b border-zinc-800 text-white sticky top-0 z-30 shadow-md">
-      {/* High Density Main Header Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="bg-zinc-900 border-b border-zinc-800 text-white sticky top-0 z-30 shadow-md shrink-0">
+      {/* Ultra Compact Main Navigation Bar */}
+      <div className="w-full px-3 py-1.5 flex flex-wrap items-center justify-between gap-2">
         
-        {/* Brand & Network Indicator */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-full border-[3px] border-orange-500 overflow-hidden shadow-sm">
-             <div className="absolute inset-0 bg-zinc-700"></div>
-             <span className="relative z-10 font-black italic text-lg text-white font-mono tracking-tighter" style={{ textShadow: '1px 1px 0px rgba(0,0,0,0.5)' }}>GT</span>
+        {/* Left Section: Brand, Title, and Tab Navigation */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Brand & Logo */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center justify-center w-7 h-7 rounded-full border-2 border-orange-500 overflow-hidden shrink-0 shadow-sm">
+              <div className="absolute inset-0 bg-zinc-700"></div>
+              <span className="relative z-10 font-black italic text-xs text-white font-mono" style={{ textShadow: '1px 1px 0px rgba(0,0,0,0.5)' }}>GT</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-xs sm:text-sm font-bold tracking-tight text-zinc-100 whitespace-nowrap">
+                نظام تتبع أوامر الطباعة
+              </h1>
+              <span className="text-zinc-500 font-normal text-[10px] font-mono hidden md:inline-block">v2.4.0</span>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-100">
-              نظام تتبع أوامر الطباعة
-            </h1>
-            <span className="text-zinc-500 font-normal text-sm mr-2 font-mono hidden sm:inline-block">v2.4.0</span>
-          </div>
+
+          <div className="h-4 w-px bg-zinc-800 hidden lg:block"></div>
+
+          {/* Nav Tabs */}
+          <nav className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded-lg border border-zinc-800">
+            <button
+              onClick={() => setActiveTab('kanban')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                activeTab === 'kanban'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span>لوحة كانبان</span>
+              {pendingJobsCount > 0 && (
+                <span className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded font-mono">
+                  {pendingJobsCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('compact')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                activeTab === 'compact'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>عرض شبكي</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                activeTab === 'stats'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>الإحصائيات</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('code')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                activeTab === 'code'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              <span>Python كود</span>
+            </button>
+          </nav>
         </div>
 
-        {/* High Density Header Controls */}
-        <div className="flex items-center gap-3 text-sm">
+        {/* Right Section: Path, Date, Actions, Stats */}
+        <div className="flex items-center gap-2 text-xs">
+          
+          {/* Summary Stats Badge */}
+          <div className="text-[11px] text-zinc-400 font-mono hidden xl:flex items-center gap-2 bg-zinc-950 px-2 py-1 rounded border border-zinc-800/80">
+            <span>المكتمل: <strong className="text-emerald-400 font-bold">{totalJobsCount - pendingJobsCount}</strong></span>
+            <span>•</span>
+            <span>الانتظار: <strong className="text-amber-400 font-bold">{pendingJobsCount}</strong></span>
+          </div>
+
           {/* Path Badge */}
           <button
             onClick={onOpenConfig}
-            className="hidden md:flex bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg border border-zinc-700 items-center gap-2 transition-colors"
+            className="hidden lg:flex bg-zinc-800 hover:bg-zinc-700 px-2 py-1 rounded-md border border-zinc-700 items-center gap-1.5 transition-colors text-xs"
             title="تعديل مسار الشبكة"
           >
-            <span className="text-zinc-400 text-xs">المسار:</span>
-            <code className="text-orange-300 text-xs font-mono max-w-[150px] lg:max-w-[200px] truncate dir-ltr">
+            <span className="text-zinc-400 text-[10px]">المسار:</span>
+            <code className="text-orange-300 text-[11px] font-mono max-w-[120px] xl:max-w-[160px] truncate dir-ltr">
               {config.basePath}
             </code>
           </button>
 
-          {/* Today Date */}
-          <div className="hidden lg:flex items-center mx-2 bg-zinc-950 rounded-lg border border-zinc-800 p-1 shadow-inner">
+          {/* Work Date Switcher */}
+          <div className="hidden sm:flex items-center bg-zinc-950 rounded-md border border-zinc-800 p-0.5">
             <button
               onClick={() => adjustDate(-1)}
               className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
               title="اليوم السابق"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-3 h-3" />
             </button>
-            <div className="flex flex-col items-center px-3 min-w-[80px]">
-              <span className="text-[10px] text-zinc-500 font-bold mb-0.5" onClick={resetToToday} title="العودة لليوم" style={{cursor: 'pointer'}}>تاريخ العمل</span>
-              <span className="font-mono text-orange-400 font-bold uppercase text-sm dir-ltr">
+            <div className="flex flex-col items-center px-2 min-w-[65px]">
+              <span className="text-[9px] text-zinc-500 font-bold -mb-0.5 cursor-pointer hover:text-orange-300" onClick={resetToToday} title="العودة لليوم">تاريخ العمل</span>
+              <span className="font-mono text-orange-400 font-bold text-xs dir-ltr">
                 {config.currentDate}
               </span>
             </div>
@@ -157,130 +226,62 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
               title="اليوم التالي"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3 h-3" />
             </button>
           </div>
 
-          <div className="hidden lg:block w-px h-8 bg-zinc-800 mx-2"></div>
-
-          {/* Notification Bell with Red Cascading Alert Badge */}
+          {/* Alert Notification */}
           <button
             onClick={onAcknowledgeAlert}
-            className={`relative p-2 rounded-lg border transition-all ${
+            className={`relative p-1.5 rounded-md border transition-all ${
               unacknowledgedCount > 0
-                ? 'bg-red-600 text-white border-red-500 hover:bg-red-500 shadow-lg shadow-red-600/40 animate-pulse'
+                ? 'bg-red-600 text-white border-red-500 hover:bg-red-500 shadow-md animate-pulse'
                 : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300 hover:text-white'
             }`}
             title={unacknowledgedCount > 0 ? `تنبيه: ${unacknowledgedCount} طلب جديد` : 'لا توجد تنبيهات جديدة'}
           >
             {unacknowledgedCount > 0 ? (
-              <BellRing className="w-4 h-4 text-white animate-wiggle" />
+              <BellRing className="w-3.5 h-3.5 text-white" />
             ) : (
-              <Bell className="w-4 h-4 text-zinc-400" />
+              <Bell className="w-3.5 h-3.5 text-zinc-400" />
             )}
             {unacknowledgedCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] px-1 bg-yellow-300 text-red-950 text-[11px] font-black rounded-full flex items-center justify-center border border-red-700 shadow font-mono">
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 bg-yellow-300 text-red-950 text-[10px] font-black rounded-full flex items-center justify-center border border-red-700 shadow font-mono">
                 {unacknowledgedCount}
               </span>
             )}
           </button>
 
-          {/* Refresh Button */}
+          {/* Refresh */}
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="p-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white transition-all"
+            className="p-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-md text-zinc-300 hover:text-white transition-all"
             title="تحديث تلقائي للملفات"
           >
-            <RefreshCw className={`w-4 h-4 text-orange-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-orange-400 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
 
-          {/* Export Job */}
+          {/* Export */}
           <button
             onClick={onOpenExport}
-            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold px-4 py-1.5 rounded-lg transition-all shadow-sm text-sm"
+            className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold px-2.5 py-1 rounded-md transition-all text-xs"
             title="تصدير تقرير الجرد"
           >
-            <FileDown className="w-4 h-4 text-emerald-400" />
-            <span className="hidden sm:inline">جرد</span>
+            <FileDown className="w-3.5 h-3.5 text-emerald-400" />
+            <span>جرد</span>
           </button>
 
-          {/* Add Job */}
+          {/* New Job */}
           <button
             onClick={onOpenNewJob}
-            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-4 py-1.5 rounded-lg transition-all shadow-sm text-sm"
+            className="flex items-center gap-1 bg-orange-600 hover:bg-orange-500 text-white font-bold px-3 py-1 rounded-md transition-all text-xs shadow-sm"
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">أمر جديد</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>أمر جديد</span>
           </button>
         </div>
-      </div>
 
-      {/* Navigation Sub-Bar */}
-      <div className="bg-zinc-950/80 border-t border-zinc-800/80 px-4 sm:px-6 lg:px-8 py-2">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          
-          <nav className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('kanban')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${
-                activeTab === 'kanban'
-                  ? 'bg-orange-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
-              }`}
-            >
-              <Kanban className="w-4 h-4" />
-              <span>لوحة كانبان</span>
-              {pendingJobsCount > 0 && (
-                <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-md font-mono">
-                  {pendingJobsCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('compact')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${
-                activeTab === 'compact'
-                  ? 'bg-orange-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>عرض شبكي</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${
-                activeTab === 'stats'
-                  ? 'bg-orange-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>الإحصائيات</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('code')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${
-                activeTab === 'code'
-                  ? 'bg-orange-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
-              }`}
-            >
-              <Code2 className="w-4 h-4" />
-              <span>كود Python</span>
-            </button>
-          </nav>
-
-          <div className="text-xs text-zinc-400 font-mono hidden sm:flex items-center gap-4">
-            <span>الانتظار: <strong className="text-amber-400 font-bold text-sm">{pendingJobsCount}</strong></span>
-            <span>المكتمل: <strong className="text-emerald-400 font-bold text-sm">{totalJobsCount - pendingJobsCount}</strong></span>
-          </div>
-
-        </div>
       </div>
     </header>
   );
