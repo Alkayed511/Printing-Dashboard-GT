@@ -2,18 +2,6 @@ import React, { useState } from 'react';
 import { PrintJob, PrinterInfo } from '../types';
 import { PRINTERS_LIST } from '../data/printers';
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import {
   Activity,
   Clock,
   CheckCircle2,
@@ -28,6 +16,8 @@ interface StatsOverviewProps {
 
 export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'done'>('all');
+  const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+  const [hoveredDonutIndex, setHoveredDonutIndex] = useState<number | null>(null);
 
   const totalJobs = jobs.length;
   const pendingJobs = jobs.filter((j: PrintJob) => j.status === 'pending').length;
@@ -41,19 +31,19 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
   // Total quantity
   const totalQuantity = jobs.reduce((acc: number, curr: PrintJob) => acc + (curr.quantity || 1), 0);
 
-  // Data for Stacked Bar Chart (Printer Performance)
-  const barChartData = PRINTERS_LIST.map((printer: PrinterInfo) => {
+  // Stacked Bar Chart Data calculation
+  const printerBarData = PRINTERS_LIST.map((printer: PrinterInfo) => {
     const pJobs = jobs.filter((j: PrintJob) => j.printer === printer.id);
     const doneCount = pJobs.filter((j: PrintJob) => j.status === 'done').length;
     const pendingCount = pJobs.filter((j: PrintJob) => j.status === 'pending').length;
 
-    // Short name for X-Axis
     let shortName = printer.nameAr.split(' ')[0];
     if (printer.id === 'r2r') shortName = 'رول R2R';
     if (printer.id === 'dtf') shortName = 'DTF قماش';
     if (printer.id === 'flat small') shortName = 'فلات سمول';
 
     return {
+      id: printer.id,
       name: shortName,
       fullName: printer.nameAr,
       done: doneCount,
@@ -63,39 +53,39 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
     };
   });
 
-  // Data for Donut Chart (Orders by Category / Printer)
-  const donutData = PRINTERS_LIST.map((printer: PrinterInfo) => {
+  const maxBarTotal = Math.max(...printerBarData.map((d) => d.total), 4);
+
+  // Donut Data
+  const donutItems = PRINTERS_LIST.map((printer: PrinterInfo) => {
     const count = jobs.filter((j: PrintJob) => j.printer === printer.id).length;
     return {
+      id: printer.id,
       name: printer.nameAr.split(' ')[0],
       fullName: printer.nameAr,
       value: count,
       color: printer.accentColor,
     };
-  }).filter((item) => item.value > 0 || totalJobs === 0);
+  });
 
-  // If no jobs at all, display mock slices for pleasant preview visualization
-  const displayDonutData =
-    donutData.length > 0 && totalJobs > 0
-      ? donutData
-      : PRINTERS_LIST.map((p: PrinterInfo) => ({
-          name: p.nameAr.split(' ')[0],
-          fullName: p.nameAr,
-          value: 1,
-          color: p.accentColor,
-        }));
+  const donutTotal = donutItems.reduce((acc, curr) => acc + curr.value, 0);
 
-  // Filtered Jobs for Order Log Table
+  // Filtered Jobs for Order Log
   const filteredJobs = jobs.filter((job: PrintJob) => {
     if (filterStatus === 'pending') return job.status === 'pending';
     if (filterStatus === 'done') return job.status === 'done';
     return true;
   });
 
+  // SVG Donut Calculations
+  const radius = 65;
+  const strokeWidth = 20;
+  const circumference = 2 * Math.PI * radius;
+  let accumulatedPercent = 0;
+
   return (
     <div className="space-y-6 dir-rtl text-right">
       
-      {/* 1. TOP METRIC CARDS ROW (5 Cards matching reference layout) */}
+      {/* 1. TOP METRIC CARDS ROW (5 Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
         {/* TOTAL ORDERS */}
@@ -159,7 +149,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Card: Printer Performance (Stacked Bar) - Spans 2 cols */}
-        <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4 min-h-[360px]">
+        <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4">
           
           {/* Header Bar */}
           <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
@@ -184,55 +174,89 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
             </div>
           </div>
 
-          {/* Bar Chart Container */}
-          <div className="h-64 sm:h-72 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  stroke="#a1a1aa"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: '#3f3f46' }}
-                />
-                <YAxis
-                  stroke="#a1a1aa"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: '#3f3f46' }}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  content={({ active, payload, label }: any) => {
-                    if (active && payload && payload.length) {
-                      const doneVal = payload[0]?.value || 0;
-                      const pendingVal = payload[1]?.value || 0;
-                      const totalVal = Number(doneVal) + Number(pendingVal);
-                      return (
-                        <div className="bg-zinc-950 border border-zinc-700 p-3 rounded-xl shadow-2xl dir-rtl text-right text-xs">
-                          <div className="font-bold text-white mb-1.5 border-b border-zinc-800 pb-1">{label}</div>
-                          <div className="text-emerald-400 font-semibold">مكتمل: {doneVal} أمر</div>
-                          <div className="text-amber-400 font-semibold">قيد الانتظار: {pendingVal} أمر</div>
-                          <div className="text-zinc-300 font-bold mt-1 pt-1 border-t border-zinc-800">
-                            الإجمالي: {totalVal} أمر
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="done" name="مكتمل" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} barSize={28} />
-                <Bar dataKey="pending" name="معلق" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={28} />
-              </BarChart>
-            </ResponsiveContainer>
+          {/* SVG Custom Responsive Stacked Bar Chart */}
+          <div className="relative w-full h-64 pt-2">
+            
+            {/* Grid Y-lines */}
+            <div className="absolute inset-x-8 top-2 bottom-8 flex flex-col justify-between pointer-events-none border-b border-zinc-800">
+              {[1, 0.75, 0.5, 0.25, 0].map((step, idx) => (
+                <div key={idx} className="flex items-center w-full">
+                  <span className="w-6 text-[10px] font-mono text-zinc-500 pl-1">
+                    {Math.round(maxBarTotal * step)}
+                  </span>
+                  <div className="flex-1 border-b border-dashed border-zinc-800/80" />
+                </div>
+              ))}
+            </div>
+
+            {/* Bars Container */}
+            <div className="absolute inset-x-12 top-2 bottom-8 flex items-end justify-around">
+              {printerBarData.map((item, idx) => {
+                const totalHeightPct = (item.total / maxBarTotal) * 100;
+                const donePct = item.total > 0 ? (item.done / item.total) * 100 : 0;
+                const pendingPct = item.total > 0 ? (item.pending / item.total) * 100 : 0;
+
+                const isHovered = hoveredBarIndex === idx;
+
+                return (
+                  <div
+                    key={item.id}
+                    onMouseEnter={() => setHoveredBarIndex(idx)}
+                    onMouseLeave={() => setHoveredBarIndex(null)}
+                    className="relative flex flex-col items-center group cursor-pointer h-full justify-end w-12"
+                  >
+                    {/* Hover Tooltip Popover */}
+                    {isHovered && (
+                      <div className="absolute -top-16 z-30 bg-zinc-950 border border-zinc-700 px-3 py-2 rounded-xl shadow-2xl text-xs whitespace-nowrap pointer-events-none animate-in fade-in zoom-in-95">
+                        <div className="font-bold text-white mb-0.5">{item.fullName}</div>
+                        <div className="text-emerald-400 text-[11px]">مكتمل: {item.done}</div>
+                        <div className="text-amber-400 text-[11px]">معلق: {item.pending}</div>
+                      </div>
+                    )}
+
+                    {/* Stacked Column Bar */}
+                    <div
+                      className="w-8 sm:w-10 rounded-t-lg overflow-hidden flex flex-col justify-end transition-all duration-300 shadow-md"
+                      style={{
+                        height: `${Math.max(totalHeightPct, 6)}%`,
+                        opacity: hoveredBarIndex === null || isHovered ? 1 : 0.4,
+                      }}
+                    >
+                      {/* Pending segment (Amber - Top) */}
+                      {pendingPct > 0 && (
+                        <div
+                          className="bg-amber-500 hover:bg-amber-400 transition-colors"
+                          style={{ height: `${pendingPct}%` }}
+                        />
+                      )}
+                      {/* Done segment (Emerald - Bottom) */}
+                      {donePct > 0 && (
+                        <div
+                          className="bg-emerald-500 hover:bg-emerald-400 transition-colors"
+                          style={{ height: `${donePct}%` }}
+                        />
+                      )}
+                      {/* Empty state bar */}
+                      {item.total === 0 && (
+                        <div className="h-full bg-zinc-800/50 w-full" />
+                      )}
+                    </div>
+
+                    {/* X-Axis Label */}
+                    <span className="absolute -bottom-6 text-[11px] font-semibold text-zinc-400 group-hover:text-white transition-colors truncate max-w-[70px]">
+                      {item.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
           </div>
 
         </div>
 
         {/* Right Card: Orders By Category / Printer (Donut Chart) */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4 min-h-[360px]">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between space-y-4">
           
           {/* Header */}
           <div className="pb-3 border-b border-zinc-800">
@@ -242,37 +266,45 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
 
           {/* Donut Chart with Center Text */}
           <div className="relative h-52 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <PieChart>
-                <Pie
-                  data={displayDonutData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {displayDonutData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="#18181b" strokeWidth={2} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({ active, payload }: any) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-zinc-950 border border-zinc-700 p-2.5 rounded-xl text-xs dir-rtl text-right">
-                          <div className="font-bold text-white">{data.fullName}</div>
-                          <div className="text-amber-300 font-mono mt-0.5">{data.value} أمر</div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            
+            <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 160 160">
+              {/* Background Ring */}
+              <circle
+                cx="80"
+                cy="80"
+                r={radius}
+                fill="transparent"
+                stroke="#27272a"
+                strokeWidth={strokeWidth}
+              />
+
+              {/* Slices */}
+              {donutItems.map((item, index) => {
+                const fraction = donutTotal > 0 ? item.value / donutTotal : 1 / donutItems.length;
+                const strokeDasharray = `${fraction * circumference} ${circumference}`;
+                const strokeDashoffset = -accumulatedPercent * circumference;
+                accumulatedPercent += fraction;
+
+                const isHovered = hoveredDonutIndex === index;
+
+                return (
+                  <circle
+                    key={item.id}
+                    cx="80"
+                    cy="80"
+                    r={radius}
+                    fill="transparent"
+                    stroke={item.color}
+                    strokeWidth={isHovered ? strokeWidth + 4 : strokeWidth}
+                    strokeDasharray={strokeDasharray}
+                    strokeDashoffset={strokeDashoffset}
+                    className="transition-all duration-300 cursor-pointer"
+                    onMouseEnter={() => setHoveredDonutIndex(index)}
+                    onMouseLeave={() => setHoveredDonutIndex(null)}
+                  />
+                );
+              })}
+            </svg>
 
             {/* Center Label inside Donut */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -283,18 +315,24 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
 
           {/* Donut Legend below */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800 text-xs">
-            {PRINTERS_LIST.map((printer: PrinterInfo) => {
-              const pCount = jobs.filter((j: PrintJob) => j.printer === printer.id).length;
-              return (
-                <div key={printer.id} className="flex items-center justify-between text-zinc-300 bg-zinc-950/50 p-1.5 rounded-lg border border-zinc-800/60">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: printer.accentColor }} />
-                    <span className="truncate text-[11px]">{printer.nameAr.split(' ')[0]}</span>
-                  </div>
-                  <span className="font-mono font-bold text-zinc-400 text-[11px]">{pCount}</span>
+            {donutItems.map((item, index) => (
+              <div
+                key={item.id}
+                onMouseEnter={() => setHoveredDonutIndex(index)}
+                onMouseLeave={() => setHoveredDonutIndex(null)}
+                className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer ${
+                  hoveredDonutIndex === index
+                    ? 'bg-zinc-800 border-zinc-600 text-white'
+                    : 'bg-zinc-950/50 border-zinc-800/60 text-zinc-300'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="truncate text-[11px]">{item.name}</span>
                 </div>
-              );
-            })}
+                <span className="font-mono font-bold text-zinc-400 text-[11px]">{item.value}</span>
+              </div>
+            ))}
           </div>
 
         </div>
