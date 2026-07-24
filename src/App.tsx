@@ -161,6 +161,22 @@ export default function App() {
     }
   };
 
+  const handleUpdateJob = async (id: string, updates: Partial<PrintJob>) => {
+    setJobs((prev) =>
+      prev.map((j) => (j.id === id ? { ...j, ...updates, updatedAt: new Date().toISOString() } : j))
+    );
+    try {
+      await fetch(`/api/files/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+    } catch (e) {
+      console.error('Error updating file:', e);
+      fetchFiles();
+    }
+  };
+
   // Add New Job
   const handleAddJob = async (jobData: Partial<PrintJob>) => {
     try {
@@ -314,6 +330,7 @@ export default function App() {
         job={selectedJobDetails}
         onClose={() => setSelectedJobDetails(null)}
         onMoveJob={handleMoveJob}
+        onUpdateJob={handleUpdateJob}
         basePath={config.basePath}
         currentDate={config.currentDate}
       />

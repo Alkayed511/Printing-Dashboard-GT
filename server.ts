@@ -20,6 +20,9 @@ let serverConfig: ServerConfig = {
 
 const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];
 
+// In-memory overrides for real disk jobs
+let jobOverrides: Record<string, Partial<PrintJob>> = {};
+
 // In-memory file database for simulation or sync
 let mockJobs: PrintJob[] = [
   {
@@ -243,10 +246,12 @@ app.get('/api/files', (req: Request, res: Response) => {
       }
     });
 
-    res.json({ jobs: realJobs, isRealStorage: true, scannedPath: dateDir });
+    const jobsWithOverrides = realJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
+    res.json({ jobs: jobsWithOverrides, isRealStorage: true, scannedPath: dateDir });
   } else {
     // Return mock database filtered or simulated
-    res.json({ jobs: mockJobs, isRealStorage: false, scannedPath: path.join(serverConfig.basePath, selectedDate) });
+    const jobsWithOverrides = mockJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
+    res.json({ jobs: jobsWithOverrides, isRealStorage: false, scannedPath: path.join(serverConfig.basePath, selectedDate) });
   }
 });
 
@@ -361,6 +366,32 @@ app.post('/api/files/add', (req: Request, res: Response) => {
   }
 
   res.json({ success: true, newJob });
+});
+
+// PUT /api/files/:id - Update job metadata
+app.put('/api/files/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { customerName, material, quantity, notes, dimensions } = req.body;
+  
+  if (!jobOverrides[id]) {
+    jobOverrides[id] = {};
+  }
+  
+  if (customerName !== undefined) jobOverrides[id].customerName = customerName;
+  if (material !== undefined) jobOverrides[id].material = material;
+  if (quantity !== undefined) jobOverrides[id].quantity = Number(quantity);
+  if (notes !== undefined) jobOverrides[id].notes = notes;
+  if (dimensions !== undefined) jobOverrides[id].dimensions = dimensions;
+  jobOverrides[id].updatedAt = new Date().toISOString();
+
+  // Also update mockJobs if it exists there
+  const jobIndex = mockJobs.findIndex((j) => j.id === id);
+  if (jobIndex !== -1) {
+    Object.assign(mockJobs[jobIndex], jobOverrides[id]);
+    return res.json({ success: true, updatedJob: mockJobs[jobIndex] });
+  }
+  
+  return res.json({ success: true, updatedOverrides: jobOverrides[id] });
 });
 
 // DELETE /api/files/:id - Delete an order file

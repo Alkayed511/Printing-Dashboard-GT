@@ -1,0 +1,41 @@
+interface JobDetailsModalProps {
+  job: PrintJob | null;
+  onClose: () => void;
+  onMoveJob: (id: string, targetStatus: FileStatus) => void;
+  onUpdateJob?: (id: string, updates: Partial<PrintJob>) => void;
+  basePath: string;
+  currentDate: string;
+}
+
+export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
+  job,
+  onClose,
+  onMoveJob,
+  onUpdateJob,
+  basePath,
+  currentDate,
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<PrintJob>>({});
+
+  useEffect(() => {
+    if (job) {
+      setEditForm({
+        customerName: job.customerName,
+        material: job.material,
+        quantity: job.quantity,
+        notes: job.notes,
+        dimensions: job.dimensions
+      });
+      setIsEditing(false);
+    }
+  }, [job]);
+
+  if (!job) return null;
+
+  const handleSave = () => {
+    if (onUpdateJob && job) {
+      onUpdateJob(job.id, editForm);
+    }
+    setIsEditing(false);
+  };

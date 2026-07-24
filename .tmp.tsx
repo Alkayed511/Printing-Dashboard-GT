@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   X, 
   Printer, 
@@ -12,9 +12,7 @@ import {
   HardDrive, 
   RotateCcw, 
   ArrowLeft,
-  Calendar,
-  Edit3,
-  Save
+  Calendar
 } from 'lucide-react';
 import { PrintJob, FileStatus } from '../types';
 import { PRINTERS_LIST } from '../data/printers';
@@ -23,7 +21,6 @@ interface JobDetailsModalProps {
   job: PrintJob | null;
   onClose: () => void;
   onMoveJob: (id: string, targetStatus: FileStatus) => void;
-  onUpdateJob?: (id: string, updates: Partial<PrintJob>) => void;
   basePath: string;
   currentDate: string;
 }
@@ -32,34 +29,10 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   job,
   onClose,
   onMoveJob,
-  onUpdateJob,
   basePath,
   currentDate,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<PrintJob>>({});
-
-  useEffect(() => {
-    if (job) {
-      setEditForm({
-        customerName: job.customerName,
-        material: job.material,
-        quantity: job.quantity,
-        notes: job.notes,
-        dimensions: job.dimensions
-      });
-      setIsEditing(false);
-    }
-  }, [job]);
-
   if (!job) return null;
-
-  const handleSave = () => {
-    if (onUpdateJob && job) {
-      onUpdateJob(job.id, editForm);
-    }
-    setIsEditing(false);
-  };
 
   const printerInfo = PRINTERS_LIST.find((p) => p.id === job.printer);
   const isDone = job.status === 'done';
@@ -89,23 +62,12 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
               <p className="text-xs text-zinc-400">بطاقة تفاصيل أمر الطباعة</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {!isEditing ? (
-              <button onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors" title="تعديل البيانات">
-                <Edit3 className="w-5 h-5" />
-              </button>
-            ) : (
-              <button onClick={handleSave} className="text-emerald-400 hover:text-emerald-300 p-1 rounded-lg hover:bg-zinc-800 transition-colors" title="حفظ التعديلات">
-                <Save className="w-5 h-5" />
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Body */}
@@ -139,11 +101,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                 <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
                 الأبعاد
               </span>
-              {!isEditing ? (
-                <strong className="text-zinc-100 block text-sm">{job.dimensions || 'غير محدد'}</strong>
-              ) : (
-                <input type="text" value={editForm.dimensions || ''} onChange={e => setEditForm({...editForm, dimensions: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" />
-              )}
+              <strong className="text-zinc-100 block text-sm">{job.dimensions || 'غير محدد'}</strong>
             </div>
 
             <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
@@ -151,11 +109,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                 <Hash className="w-3.5 h-3.5 text-blue-400" />
                 الكمية
               </span>
-              {!isEditing ? (
-                <strong className="text-zinc-100 block text-sm">{job.quantity || 1} قطعة</strong>
-              ) : (
-                <input type="number" value={editForm.quantity || 1} onChange={e => setEditForm({...editForm, quantity: Number(e.target.value)})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" min="1" />
-              )}
+              <strong className="text-zinc-100 block text-sm">{job.quantity || 1} قطعة</strong>
             </div>
 
             <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
@@ -163,11 +117,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                 <Layers className="w-3.5 h-3.5 text-amber-400" />
                 الخامة
               </span>
-              {!isEditing ? (
-                <strong className="text-zinc-100 block text-sm">{job.material || 'عادية'}</strong>
-              ) : (
-                <input type="text" value={editForm.material || ''} onChange={e => setEditForm({...editForm, material: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" />
-              )}
+              <strong className="text-zinc-100 block text-sm">{job.material || 'عادية'}</strong>
             </div>
 
             <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
@@ -175,28 +125,15 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                 <User className="w-3.5 h-3.5 text-emerald-400" />
                 العميل
               </span>
-              {!isEditing ? (
-                <strong className="text-zinc-100 block text-sm">{job.customerName || 'عميل'}</strong>
-              ) : (
-                <input type="text" value={editForm.customerName || ''} onChange={e => setEditForm({...editForm, customerName: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" />
-              )}
+              <strong className="text-zinc-100 block text-sm">{job.customerName || 'عميل'}</strong>
             </div>
           </div>
 
           {/* Notes */}
-          {(job.notes || isEditing) && (
+          {job.notes && (
             <div className="p-3.5 bg-amber-950/20 border border-amber-800/30 rounded-xl text-xs space-y-1">
               <strong className="text-amber-300 block">📝 تعليمات المصمم للفني:</strong>
-              {!isEditing ? (
-                <p className="text-zinc-300">{job.notes}</p>
-              ) : (
-                <textarea 
-                  value={editForm.notes || ''} 
-                  onChange={e => setEditForm({...editForm, notes: e.target.value})} 
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500 min-h-[60px]" 
-                  placeholder="أضف تعليمات هنا..."
-                />
-              )}
+              <p className="text-zinc-300">{job.notes}</p>
             </div>
           )}
 
