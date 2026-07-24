@@ -4,10 +4,9 @@ import { Navbar } from './components/Navbar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CompactGrid } from './components/CompactGrid';
 import { StatsOverview } from './components/StatsOverview';
-import { NetworkConfigModal } from './components/NetworkConfigModal';
+import { SettingsTab } from './components/SettingsTab';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
-import { NewOrderNotification } from './components/NewOrderNotification';
 
 export default function App() {
   const [jobs, setJobs] = useState<PrintJob[]>([]);
@@ -23,8 +22,7 @@ export default function App() {
     activePath: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats'>('kanban');
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats' | 'settings'>('kanban');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -196,23 +194,22 @@ export default function App() {
         config={config}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenConfig={() => setIsConfigOpen(true)}
         onChangeDate={(newDate) => handleSaveConfig({ currentDate: newDate })}
         onOpenExport={() => setIsExportOpen(true)}
         onRefresh={fetchFiles}
         isRefreshing={isRefreshing}
         totalJobsCount={jobs.length}
         pendingJobsCount={pendingCount}
-        unacknowledgedCount={unacknowledgedJobs.length}
+        unacknowledgedJobs={unacknowledgedJobs}
+        onDismissNotification={(id) => {
+          seenJobIdsRef.current.add(id);
+          setUnacknowledgedJobs(prev => prev.filter(j => j.id !== id));
+        }}
+        onDismissAllNotifications={handleAcknowledgeAlert}
         onAcknowledgeAlert={handleAcknowledgeAlert}
       />
 
       {/* Cascading Red Notification Banner with Sound */}
-      <NewOrderNotification
-        unacknowledgedJobs={unacknowledgedJobs}
-        onAcknowledge={handleAcknowledgeAlert}
-        onSelectJob={setSelectedJobDetails}
-      />
 
       {/* Main Container - Fills screen without outer scrolling */}
       <main className="flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0">
@@ -235,6 +232,17 @@ export default function App() {
           </div>
         )}
 
+        {activeTab === 'settings' && (
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <SettingsTab config={config} onSaveConfig={handleSaveConfig} />
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <SettingsTab config={config} onSaveConfig={handleSaveConfig} />
+          </div>
+        )}
         {activeTab === 'stats' && (
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <StatsOverview jobs={jobs} />
@@ -245,12 +253,6 @@ export default function App() {
       {/* Quick Simulator & Status Bar at bottom */}
 
       {/* Modals */}
-      <NetworkConfigModal
-        isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
-        config={config}
-        onSaveConfig={handleSaveConfig}
-      />
 
 
       {isExportOpen && (
