@@ -19,7 +19,7 @@ export default function App() {
   const isFirstLoadRef = useRef<boolean>(true);
 
   const [config, setConfig] = useState<ServerConfig>({
-    basePath: 'C:\\PrintNetworkFolder',
+    basePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share',
     currentDate: `${new Date().getDate()}-${new Date().getMonth() + 1}`,
     autoRefreshInterval: 5,
     isRealStorageAvailable: false,

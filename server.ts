@@ -11,11 +11,11 @@ app.use(express.json());
 
 // Default configuration
 let serverConfig: ServerConfig = {
-  basePath: 'C:\\PrintNetworkFolder', // Default Windows SMB/Network path
+  basePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share', // Default Windows SMB/Network path
   currentDate: `${new Date().getDate()}-${new Date().getMonth() + 1}`, // e.g., '22-7'
   autoRefreshInterval: 5, // 5 seconds default
   isRealStorageAvailable: false,
-  activePath: 'C:\\PrintNetworkFolder\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`
+  activePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`
 };
 
 const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];
