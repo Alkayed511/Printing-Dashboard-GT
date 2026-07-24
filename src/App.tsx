@@ -5,9 +5,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CompactGrid } from './components/CompactGrid';
 import { StatsOverview } from './components/StatsOverview';
 import { NetworkConfigModal } from './components/NetworkConfigModal';
-import { NewJobModal } from './components/NewJobModal';
 import { JobDetailsModal } from './components/JobDetailsModal';
-import { QuickSimulatorBar } from './components/QuickSimulatorBar';
 import { ExportReportModal } from './components/ExportReportModal';
 import { NewOrderNotification } from './components/NewOrderNotification';
 
@@ -27,9 +25,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats'>('kanban');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isNewJobOpen, setIsNewJobOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [selectedPrinterForNewJob, setSelectedPrinterForNewJob] = useState<PrinterType>('eco');
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -165,6 +161,7 @@ export default function App() {
     setJobs((prev) =>
       prev.map((j) => (j.id === id ? { ...j, ...updates, updatedAt: new Date().toISOString() } : j))
     );
+    setSelectedJobDetails((prev) => prev && prev.id === id ? { ...prev, ...updates, updatedAt: new Date().toISOString() } : prev);
     try {
       await fetch(`/api/files/${id}`, {
         method: 'PUT',
@@ -177,51 +174,6 @@ export default function App() {
     }
   };
 
-  // Add New Job
-  const handleAddJob = async (jobData: Partial<PrintJob>) => {
-    try {
-      const res = await fetch('/api/files/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobData),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.newJob) {
-          const newJobObj: PrintJob = data.newJob;
-          setJobs((prev) => [newJobObj, ...prev]);
-          // Add to unacknowledged jobs to trigger cascading alert and sound
-          setUnacknowledgedJobs((prev) => [newJobObj, ...prev]);
-        }
-      }
-    } catch (e) {
-      console.error('Error adding new job:', e);
-    }
-  };
-
-  // Quick simulation add
-  const handleAddQuickJob = (printer: PrinterType) => {
-    const randomNum = Math.floor(Math.random() * 900) + 100;
-    const sampleNames: Record<PrinterType, string> = {
-      eco: `ستيكر_محل_الرؤية_${randomNum}_120x80cm.pdf`,
-      solvint: `بنر_طريقي_${randomNum}_400x200cm_فليكس.tiff`,
-      r2r: `ستارة_مكتبية_رول_${randomNum}_150x200cm.jpg`,
-      cutter: `قص_شعار_شركة_الأمل_${randomNum}_300قطعة.eps`,
-      dtf: `طباعة_قميص_شعار_${randomNum}_A3.png`,
-      flat: `لوحة_أكريليك_شفافة_${randomNum}_40x30cm.ai`,
-      'flat small': `هدية_صينية_خشب_${randomNum}_25x25cm.psd`
-    };
-
-    handleAddJob({
-      filename: sampleNames[printer],
-      printer,
-      dimensions: 'مواصفات سريعة',
-      material: 'خامة افتراضية',
-      quantity: 1,
-      customerName: 'عميل اختبار',
-      notes: 'أمر تجريبي سريع'
-    });
-  };
 
   // Delete Job
   const handleDeleteJob = async (id: string) => {
@@ -246,10 +198,6 @@ export default function App() {
         setActiveTab={setActiveTab}
         onOpenConfig={() => setIsConfigOpen(true)}
         onChangeDate={(newDate) => handleSaveConfig({ currentDate: newDate })}
-        onOpenNewJob={() => {
-          setSelectedPrinterForNewJob('eco');
-          setIsNewJobOpen(true);
-        }}
         onOpenExport={() => setIsExportOpen(true)}
         onRefresh={fetchFiles}
         isRefreshing={isRefreshing}
@@ -274,10 +222,6 @@ export default function App() {
             onMoveJob={handleMoveJob}
             onSelectJob={setSelectedJobDetails}
             onDeleteJob={handleDeleteJob}
-            onOpenNewJobWithPrinter={(printer) => {
-              setSelectedPrinterForNewJob(printer);
-              setIsNewJobOpen(true);
-            }}
           />
         )}
 
@@ -299,11 +243,6 @@ export default function App() {
       </main>
 
       {/* Quick Simulator & Status Bar at bottom */}
-      <QuickSimulatorBar
-        onAddQuickJob={handleAddQuickJob}
-        onAutoPoll={fetchFiles}
-        isPolling={isRefreshing}
-      />
 
       {/* Modals */}
       <NetworkConfigModal
@@ -313,12 +252,6 @@ export default function App() {
         onSaveConfig={handleSaveConfig}
       />
 
-      <NewJobModal
-        isOpen={isNewJobOpen}
-        onClose={() => setIsNewJobOpen(false)}
-        defaultPrinter={selectedPrinterForNewJob}
-        onAddJob={handleAddJob}
-      />
 
       {isExportOpen && (
         <ExportReportModal

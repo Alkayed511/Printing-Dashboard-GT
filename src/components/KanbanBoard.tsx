@@ -24,7 +24,6 @@ interface KanbanBoardProps {
   onMoveJob: (id: string, targetStatus: FileStatus) => void;
   onSelectJob: (job: PrintJob) => void;
   onDeleteJob: (id: string) => void;
-  onOpenNewJobWithPrinter?: (printer: PrinterType) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -32,7 +31,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onMoveJob,
   onSelectJob,
   onDeleteJob,
-  onOpenNewJobWithPrinter,
 }) => {
   const [selectedPrinterFilter, setSelectedPrinterFilter] = useState<PrinterType | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,17 +196,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     Printer: {printer.id.toUpperCase()}
                   </span>
                   <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">({printer.nameAr})</span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {onOpenNewJobWithPrinter && (
-                    <button
-                      onClick={() => onOpenNewJobWithPrinter(printer.id)}
-                      className="p-1 hover:bg-zinc-700 rounded text-orange-300 transition-colors"
-                      title="إضافة أمر جديد بهذه الطابعة"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
               </div>
 

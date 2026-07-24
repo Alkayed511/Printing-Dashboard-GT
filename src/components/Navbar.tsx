@@ -22,7 +22,6 @@ interface NavbarProps {
   activeTab: 'kanban' | 'compact' | 'stats' | 'code';
   setActiveTab: (tab: 'kanban' | 'compact' | 'stats' | 'code') => void;
   onOpenConfig: () => void;
-  onOpenNewJob: () => void;
   onOpenExport: () => void;
   onRefresh: () => void;
   onChangeDate: (newDate: string) => void;
@@ -38,7 +37,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onOpenConfig,
-  onOpenNewJob,
   onOpenExport,
   onRefresh,
   onChangeDate,
@@ -255,14 +253,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden sm:inline">جرد</span>
           </button>
 
-          {/* New Job */}
-          <button
-            onClick={onOpenNewJob}
-            className="flex items-center gap-1 bg-orange-600 hover:bg-orange-500 text-white font-bold px-2.5 py-1 rounded-md transition-all text-xs shadow-sm shrink-0 whitespace-nowrap"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>أمر جديد</span>
-          </button>
         </div>
 
       </div>

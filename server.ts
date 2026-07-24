@@ -133,6 +133,94 @@ let mockJobs: PrintJob[] = [
 ];
 
 // Helper: check if a target path is real on local disk
+function scanDateDirectory(dateDir: string): PrintJob[] {
+    const realJobs: PrintJob[] = [];
+    DEFAULT_PRINTERS.forEach((printer) => {
+      const printerDir = path.join(dateDir, printer);
+      const doneDir = path.join(printerDir, 'done');
+
+      if (fs.existsSync(printerDir)) {
+        const entries = fs.readdirSync(printerDir, { withFileTypes: true });
+        entries.forEach((entry) => {
+          if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
+            const filePath = path.join(printerDir, entry.name);
+            const stats = fs.statSync(filePath);
+            realJobs.push({
+              id: `real-${printer}-${entry.name}`,
+              filename: entry.name,
+              printer: printer as PrinterType,
+              status: 'pending',
+              sizeBytes: stats.size,
+              createdAt: stats.birthtime.toISOString(),
+              updatedAt: stats.mtime.toISOString(),
+              dimensions: parseDimensions(entry.name),
+              material: parseMaterial(entry.name),
+              quantity: parseQuantity(entry.name),
+              customerName: parseCustomer(entry.name)
+            });
+          }
+        });
+      }
+
+      if (fs.existsSync(doneDir)) {
+        const entries = fs.readdirSync(doneDir, { withFileTypes: true });
+        entries.forEach((entry) => {
+          if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
+            const filePath = path.join(doneDir, entry.name);
+            const stats = fs.statSync(filePath);
+            realJobs.push({
+              id: `real-${printer}-done-${entry.name}`,
+              filename: entry.name,
+              printer: printer as PrinterType,
+              status: 'done',
+              sizeBytes: stats.size,
+              createdAt: stats.birthtime.toISOString(),
+              updatedAt: stats.mtime.toISOString(),
+              dimensions: parseDimensions(entry.name),
+              material: parseMaterial(entry.name),
+              quantity: parseQuantity(entry.name),
+              customerName: parseCustomer(entry.name)
+            });
+          }
+        });
+      }
+    });
+    return realJobs;
+}
+
+function getJobsForReport(basePath: string, type: string, startDate?: string, endDate?: string): PrintJob[] {
+  let allJobs: PrintJob[] = [];
+  if (!fs.existsSync(basePath)) return [];
+
+  if (type === 'daily' && startDate) {
+    const dateDir = path.join(basePath, startDate);
+    if (fs.existsSync(dateDir)) {
+      allJobs = scanDateDirectory(dateDir);
+    }
+  } else if (type === 'monthly' && startDate) {
+    const month = startDate.substring(0, 7);
+    const entries = fs.readdirSync(basePath, { withFileTypes: true });
+    entries.forEach(entry => {
+      if (entry.isDirectory() && entry.name.startsWith(month)) {
+        allJobs.push(...scanDateDirectory(path.join(basePath, entry.name)));
+      }
+    });
+  } else if (type === 'custom' && startDate && endDate) {
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime() + 86400000;
+    const entries = fs.readdirSync(basePath, { withFileTypes: true });
+    entries.forEach(entry => {
+      if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
+        const t = new Date(entry.name).getTime();
+        if (t >= start && t <= end) {
+          allJobs.push(...scanDateDirectory(path.join(basePath, entry.name)));
+        }
+      }
+    });
+  }
+  return allJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
+}
+
 function checkDiskStorage(baseP: string, dateStr: string) {
   try {
     const fullDatePath = path.join(baseP, dateStr);
@@ -187,67 +275,12 @@ app.post('/api/config', (req: Request, res: Response) => {
 app.get('/api/files', (req: Request, res: Response) => {
   const selectedDate = (req.query.date as string) || serverConfig.currentDate;
   const isReal = checkDiskStorage(serverConfig.basePath, selectedDate);
-
   if (isReal) {
-    // Scan real directory structure
     const dateDir = path.join(serverConfig.basePath, selectedDate);
-    const realJobs: PrintJob[] = [];
-
-    DEFAULT_PRINTERS.forEach((printer) => {
-      const printerDir = path.join(dateDir, printer);
-      const doneDir = path.join(printerDir, 'done');
-
-      // Check pending files
-      if (fs.existsSync(printerDir)) {
-        const entries = fs.readdirSync(printerDir, { withFileTypes: true });
-        entries.forEach((entry) => {
-          if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
-            const filePath = path.join(printerDir, entry.name);
-            const stats = fs.statSync(filePath);
-            realJobs.push({
-              id: `real-${printer}-${entry.name}`,
-              filename: entry.name,
-              printer: printer as PrinterType,
-              status: 'pending',
-              sizeBytes: stats.size,
-              createdAt: stats.birthtime.toISOString(),
-              updatedAt: stats.mtime.toISOString(),
-              dimensions: parseDimensions(entry.name),
-              material: parseMaterial(entry.name),
-              quantity: parseQuantity(entry.name),
-              customerName: parseCustomer(entry.name)
-            });
-          }
-        });
-      }
-
-      // Check done files
-      if (fs.existsSync(doneDir)) {
-        const entries = fs.readdirSync(doneDir, { withFileTypes: true });
-        entries.forEach((entry) => {
-          if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
-            const filePath = path.join(doneDir, entry.name);
-            const stats = fs.statSync(filePath);
-            realJobs.push({
-              id: `real-${printer}-done-${entry.name}`,
-              filename: entry.name,
-              printer: printer as PrinterType,
-              status: 'done',
-              sizeBytes: stats.size,
-              createdAt: stats.birthtime.toISOString(),
-              updatedAt: stats.mtime.toISOString(),
-              dimensions: parseDimensions(entry.name),
-              material: parseMaterial(entry.name),
-              quantity: parseQuantity(entry.name),
-              customerName: parseCustomer(entry.name)
-            });
-          }
-        });
-      }
-    });
-
+    const realJobs = scanDateDirectory(dateDir);
     const jobsWithOverrides = realJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
     res.json({ jobs: jobsWithOverrides, isRealStorage: true, scannedPath: dateDir });
+
   } else {
     // Return mock database filtered or simulated
     const jobsWithOverrides = mockJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
@@ -327,47 +360,6 @@ app.post('/api/files/move', (req: Request, res: Response) => {
   });
 });
 
-// POST /api/files/add - Add a new file to queue
-app.post('/api/files/add', (req: Request, res: Response) => {
-  const { filename, printer, dimensions, material, quantity, customerName, notes } = req.body;
-
-  if (!filename || !printer) {
-    return res.status(400).json({ error: 'Filename and printer are required' });
-  }
-
-  const newJob: PrintJob = {
-    id: `job-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-    filename,
-    printer: printer as PrinterType,
-    status: 'pending',
-    sizeBytes: Math.floor(Math.random() * 20000000) + 1000000,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    dimensions: dimensions || 'غير محدد',
-    material: material || 'حسب المواصفات',
-    quantity: Number(quantity) || 1,
-    customerName: customerName || 'عميل مباشر',
-    notes: notes || '',
-    previewColor: getPrinterColor(printer as PrinterType)
-  };
-
-  mockJobs.unshift(newJob);
-
-  // If real storage exists, write a empty placeholder file
-  try {
-    const dateDir = path.join(serverConfig.basePath, serverConfig.currentDate);
-    const printerDir = path.join(dateDir, printer);
-    if (fs.existsSync(printerDir)) {
-      const filePath = path.join(printerDir, filename);
-      fs.writeFileSync(filePath, `Print Order Meta: ${JSON.stringify(newJob)}`);
-    }
-  } catch (e) {
-    console.log('Real filesystem write note:', e);
-  }
-
-  res.json({ success: true, newJob });
-});
-
 // PUT /api/files/:id - Update job metadata
 app.put('/api/files/:id', (req: Request, res: Response) => {
   const { id } = req.params;
@@ -405,21 +397,26 @@ app.delete('/api/files/:id', (req: Request, res: Response) => {
 app.get('/api/reports/export/pdf', (req: Request, res: Response) => {
   const { type, startDate, endDate } = req.query;
   
-  let filtered = [...mockJobs];
-  
-  if (type === 'daily' && startDate) {
-     filtered = filtered.filter(j => j.createdAt.startsWith(startDate as string));
-  } else if (type === 'monthly' && startDate) {
-     const month = (startDate as string).substring(0, 7);
-     filtered = filtered.filter(j => j.createdAt.startsWith(month));
-  } else if (type === 'custom' && startDate && endDate) {
-     const start = new Date(startDate as string).getTime();
-     const end = new Date(endDate as string).getTime() + 86400000;
-     filtered = filtered.filter(j => {
-       const t = new Date(j.createdAt).getTime();
-       return t >= start && t <= end;
-     });
+  let filtered: PrintJob[] = [];
+  if (serverConfig.isRealStorageAvailable) {
+    filtered = getJobsForReport(serverConfig.basePath, type as string, startDate as string, endDate as string);
+  } else {
+    filtered = [...mockJobs].map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
+    if (type === 'daily' && startDate) {
+       filtered = filtered.filter(j => j.createdAt.startsWith(startDate as string));
+    } else if (type === 'monthly' && startDate) {
+       const month = (startDate as string).substring(0, 7);
+       filtered = filtered.filter(j => j.createdAt.startsWith(month));
+    } else if (type === 'custom' && startDate && endDate) {
+       const start = new Date(startDate as string).getTime();
+       const end = new Date(endDate as string).getTime() + 86400000;
+       filtered = filtered.filter(j => {
+         const t = new Date(j.createdAt).getTime();
+         return t >= start && t <= end;
+       });
+    }
   }
+
 
   const rows = filtered.map(j => `
     <tr>
@@ -497,21 +494,26 @@ app.get('/api/reports/export', (req: Request, res: Response) => {
   const headers = "رقم الطلب,اسم الملف,الطابعة,الحالة,الحجم (بايت),تاريخ الإنشاء,تاريخ التحديث,العميل,الخامة,الكمية,المقاسات\n";
   let csv = headers;
   
-  let filtered = [...mockJobs];
-  
-  if (type === 'daily' && startDate) {
-     filtered = filtered.filter(j => j.createdAt.startsWith(startDate as string));
-  } else if (type === 'monthly' && startDate) {
-     const month = (startDate as string).substring(0, 7);
-     filtered = filtered.filter(j => j.createdAt.startsWith(month));
-  } else if (type === 'custom' && startDate && endDate) {
-     const start = new Date(startDate as string).getTime();
-     const end = new Date(endDate as string).getTime() + 86400000;
-     filtered = filtered.filter(j => {
-       const t = new Date(j.createdAt).getTime();
-       return t >= start && t <= end;
-     });
+  let filtered: PrintJob[] = [];
+  if (serverConfig.isRealStorageAvailable) {
+    filtered = getJobsForReport(serverConfig.basePath, type as string, startDate as string, endDate as string);
+  } else {
+    filtered = [...mockJobs].map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
+    if (type === 'daily' && startDate) {
+       filtered = filtered.filter(j => j.createdAt.startsWith(startDate as string));
+    } else if (type === 'monthly' && startDate) {
+       const month = (startDate as string).substring(0, 7);
+       filtered = filtered.filter(j => j.createdAt.startsWith(month));
+    } else if (type === 'custom' && startDate && endDate) {
+       const start = new Date(startDate as string).getTime();
+       const end = new Date(endDate as string).getTime() + 86400000;
+       filtered = filtered.filter(j => {
+         const t = new Date(j.createdAt).getTime();
+         return t >= start && t <= end;
+       });
+    }
   }
+
 
   filtered.forEach(j => {
      csv += `${j.id},${j.filename},${j.printer},${j.status === 'done' ? 'مكتمل' : 'قيد الانتظار'},${j.sizeBytes},${j.createdAt},${j.updatedAt},${j.customerName},${j.material},${j.quantity},${j.dimensions}\n`;
