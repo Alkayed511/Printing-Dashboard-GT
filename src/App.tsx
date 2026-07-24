@@ -9,6 +9,7 @@ import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
 
 export default function App() {
+  const isDisplayMode = new URLSearchParams(window.location.search).get('display') === 'true';
   const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [unacknowledgedJobs, setUnacknowledgedJobs] = useState<PrintJob[]>([]);
   const seenJobIdsRef = useRef<Set<string>>(new Set());
@@ -223,7 +224,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-blue-500 selection:text-white dir-rtl text-right select-none">
-      <Navbar
+      {!isDisplayMode && <Navbar
         config={config}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -234,7 +235,7 @@ export default function App() {
         totalJobsCount={jobs.length}
         pendingJobsCount={jobs.filter(j => j.status === 'pending').length}
         unacknowledgedJobs={unacknowledgedJobs}
-      />
+      />}
 
       {unacknowledgedJobs.length > 0 && (
         <div className={`fixed bottom-6 right-6 ${getBannerColorClass()} text-white px-6 py-4 rounded-xl shadow-2xl z-50 transition-all transform animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center justify-between gap-6 border border-white/10`}>
@@ -245,16 +246,16 @@ export default function App() {
               <div className="text-lg">يوجد {unacknowledgedJobs.length} ملفات جديدة بانتظار الطباعة!</div>
             </div>
           </div>
-          <button 
+          {!isDisplayMode && <button 
             onClick={handleAcknowledgeAlert}
-            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors pointer-events-auto"
           >
             إخفاء
-          </button>
+          </button>}
         </div>
       )}
 
-      <main className="flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0">
+      <main className={`flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0 ${isDisplayMode ? 'pointer-events-none' : ''}`}>
         {activeTab === 'kanban' && (
           <KanbanBoard
             jobs={jobs}

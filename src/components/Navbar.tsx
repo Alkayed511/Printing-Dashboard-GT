@@ -10,7 +10,7 @@ import {
   Calendar,
   Layers,
   Settings,
-  FileDown,
+  FileDown, MonitorPlay,
   Minus,
   Bell,
   BellRing,
