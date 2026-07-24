@@ -287,10 +287,13 @@ app.get('/api/config', (req: Request, res: Response) => {
 });
 
 app.post('/api/config', (req: Request, res: Response) => {
-  const { basePath, currentDate, autoRefreshInterval } = req.body;
+  const { basePath, currentDate, autoRefreshInterval, notificationSound, notificationColor, notificationDuration } = req.body;
   if (basePath !== undefined) serverConfig.basePath = basePath;
   if (currentDate !== undefined) serverConfig.currentDate = currentDate;
   if (autoRefreshInterval !== undefined) serverConfig.autoRefreshInterval = Number(autoRefreshInterval);
+  if (notificationSound !== undefined) serverConfig.notificationSound = notificationSound;
+  if (notificationColor !== undefined) serverConfig.notificationColor = notificationColor;
+  if (notificationDuration !== undefined) serverConfig.notificationDuration = Number(notificationDuration);
 
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
