@@ -4,7 +4,6 @@ import { Navbar } from './components/Navbar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CompactGrid } from './components/CompactGrid';
 import { StatsOverview } from './components/StatsOverview';
-import { StreamlitExport } from './components/StreamlitExport';
 import { NetworkConfigModal } from './components/NetworkConfigModal';
 import { NewJobModal } from './components/NewJobModal';
 import { JobDetailsModal } from './components/JobDetailsModal';
