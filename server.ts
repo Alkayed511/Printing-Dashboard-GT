@@ -1,11 +1,25 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { createServer as createViteServer } from 'vite';
 import { PrintJob, PrinterType, FileStatus, ServerConfig } from './src/types';
 
 const app = express();
 const PORT = 3000;
+
+function getLocalIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
 
 app.use(express.json());
 
@@ -283,17 +297,20 @@ app.get('/api/config', (req: Request, res: Response) => {
   const isAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = isAvailable;
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
-  res.json(serverConfig);
+  res.json({ ...serverConfig, localIp: getLocalIp() });
 });
 
 app.post('/api/config', (req: Request, res: Response) => {
-  const { basePath, currentDate, autoRefreshInterval, notificationSound, notificationColor, notificationDuration } = req.body;
+  const { basePath, currentDate, autoRefreshInterval, notificationSound, notificationColor, notificationDuration, disableMouseInDisplayMode, themeColor } = req.body;
   if (basePath !== undefined) serverConfig.basePath = basePath;
   if (currentDate !== undefined) serverConfig.currentDate = currentDate;
   if (autoRefreshInterval !== undefined) serverConfig.autoRefreshInterval = Number(autoRefreshInterval);
   if (notificationSound !== undefined) serverConfig.notificationSound = notificationSound;
   if (notificationColor !== undefined) serverConfig.notificationColor = notificationColor;
   if (notificationDuration !== undefined) serverConfig.notificationDuration = Number(notificationDuration);
+  if (disableMouseInDisplayMode !== undefined) serverConfig.disableMouseInDisplayMode = Boolean(disableMouseInDisplayMode);
+  if (themeColor !== undefined) serverConfig.themeColor = themeColor;
+  if (req.body.secondaryColor !== undefined) serverConfig.secondaryColor = req.body.secondaryColor;
 
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
@@ -316,7 +333,7 @@ app.post('/api/config', (req: Request, res: Response) => {
     }
   }
 
-  res.json({ success: true, config: serverConfig });
+  res.json({ success: true, config: { ...serverConfig, localIp: getLocalIp() } });
 });
 
 // GET /api/files - List files for selected date

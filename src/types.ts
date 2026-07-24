@@ -38,6 +38,10 @@ export interface ServerConfig {
   notificationSound?: string;
   notificationColor?: string;
   notificationDuration?: number;
+  disableMouseInDisplayMode?: boolean;
+  themeColor?: string;
+  secondaryColor?: string;
+  localIp?: string;
 }
 
 export interface PrintStats {

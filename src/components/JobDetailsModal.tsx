@@ -127,7 +127,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
               )}
             </div>
 
-            <FileText className="w-12 h-12 text-blue-400 mx-auto" />
+            <FileText className="w-12 h-12 text-secondary-400 mx-auto" />
             <h2 className="text-base font-bold text-zinc-100 font-mono dir-ltr">{job.filename}</h2>
             <p className="text-xs text-zinc-400">حجم الملف: {(job.sizeBytes / (1024 * 1024)).toFixed(2)} ميجابايت</p>
           </div>
@@ -142,19 +142,19 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
               {!isEditing ? (
                 <strong className="text-zinc-100 block text-sm">{job.dimensions || 'غير محدد'}</strong>
               ) : (
-                <input type="text" value={editForm.dimensions || ''} onChange={e => setEditForm({...editForm, dimensions: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" />
+                <input type="text" value={editForm.dimensions || ''} onChange={e => setEditForm({...editForm, dimensions: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-secondary-500" />
               )}
             </div>
 
             <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
               <span className="text-zinc-400 flex items-center gap-1">
-                <Hash className="w-3.5 h-3.5 text-blue-400" />
+                <Hash className="w-3.5 h-3.5 text-secondary-400" />
                 الكمية
               </span>
               {!isEditing ? (
                 <strong className="text-zinc-100 block text-sm">{job.quantity || 1} قطعة</strong>
               ) : (
-                <input type="number" value={editForm.quantity || 1} onChange={e => setEditForm({...editForm, quantity: Number(e.target.value)})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" min="1" />
+                <input type="number" value={editForm.quantity || 1} onChange={e => setEditForm({...editForm, quantity: Number(e.target.value)})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-secondary-500" min="1" />
               )}
             </div>
 
@@ -166,7 +166,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
               {!isEditing ? (
                 <strong className="text-zinc-100 block text-sm">{job.material || 'عادية'}</strong>
               ) : (
-                <input type="text" value={editForm.material || ''} onChange={e => setEditForm({...editForm, material: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" />
+                <input type="text" value={editForm.material || ''} onChange={e => setEditForm({...editForm, material: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-secondary-500" />
               )}
             </div>
 
@@ -178,7 +178,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
               {!isEditing ? (
                 <strong className="text-zinc-100 block text-sm">{job.customerName || 'عميل'}</strong>
               ) : (
-                <input type="text" value={editForm.customerName || ''} onChange={e => setEditForm({...editForm, customerName: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500" />
+                <input type="text" value={editForm.customerName || ''} onChange={e => setEditForm({...editForm, customerName: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-secondary-500" />
               )}
             </div>
           </div>
@@ -193,7 +193,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                 <textarea 
                   value={editForm.notes || ''} 
                   onChange={e => setEditForm({...editForm, notes: e.target.value})} 
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-blue-500 min-h-[60px]" 
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-sm focus:outline-none focus:border-secondary-500 min-h-[60px]" 
                   placeholder="أضف تعليمات هنا..."
                 />
               )}

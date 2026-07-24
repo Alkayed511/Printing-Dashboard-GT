@@ -74,18 +74,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         
         {/* Search Input */}
         <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -tranzinc-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="بحث باسم الملف، العميل، نوع الخامة، الأبعاد..."
-            className="w-full bg-zinc-950 border border-zinc-700/80 rounded-md pr-9 pl-8 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500"
+            className="w-full bg-zinc-950 border border-zinc-700/80 rounded-md pr-3 pl-8 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-primary-500"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute left-3 top-1/2 -tranzinc-y-1/2 text-xs text-zinc-400 hover:text-white"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white"
             >
               مسح
             </button>
@@ -98,7 +97,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onClick={() => setSelectedPrinterFilter('ALL')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap transition-all ${
               selectedPrinterFilter === 'ALL'
-                ? 'bg-orange-600 text-white'
+                ? 'bg-primary-600 text-white'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
@@ -134,20 +133,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 overflow-hidden min-h-0">
         
         {/* Productivity Analytics Card */}
-        <div className="bg-orange-950/20 rounded-lg border border-orange-500/30 flex flex-col p-3 justify-between items-center gap-2 relative shadow-sm h-full min-h-0 overflow-hidden">
-          <div className="flex items-center justify-between w-full border-b border-orange-500/20 pb-2 shrink-0">
-            <span className="text-xs font-bold text-orange-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+        <div className="bg-primary-950/20 rounded-lg border border-primary-500/30 flex flex-col p-3 justify-between items-center gap-2 relative shadow-sm h-full min-h-0 overflow-hidden">
+          <div className="flex items-center justify-between w-full border-b border-primary-500/20 pb-2 shrink-0">
+            <span className="text-xs font-bold text-primary-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary-400" />
               مؤشر الإنتاجية اليومي
             </span>
-            <span className="text-[10px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded font-mono">LIVE</span>
+            <span className="text-[10px] bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded font-mono">LIVE</span>
           </div>
 
           <div className="flex flex-col items-center justify-center my-auto py-1">
-            <span className="text-4xl font-black text-orange-400 font-mono tracking-tight">
+            <span className="text-4xl font-black text-primary-400 font-mono tracking-tight">
               {jobs.length > 0 ? Math.round((jobs.filter(j => j.status === 'done').length / jobs.length) * 100) : 0}%
             </span>
-            <span className="text-[11px] text-orange-300 uppercase tracking-wider mt-1">
+            <span className="text-[11px] text-primary-300 uppercase tracking-wider mt-1">
               نسبة إنجاز الأوامر
             </span>
           </div>
@@ -155,7 +154,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           <div className="w-full space-y-2 shrink-0">
             <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
               <div 
-                className="bg-orange-500 h-full transition-all duration-500" 
+                className="bg-primary-500 h-full transition-all duration-500" 
                 style={{ 
                   width: `${jobs.length > 0 ? Math.round((jobs.filter(j => j.status === 'done').length / jobs.length) * 100) : 0}%` 
                 }} 
@@ -165,7 +164,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <div className="grid grid-cols-2 gap-2 w-full text-center text-xs">
               <div className="bg-zinc-900/80 p-1.5 rounded-md border border-zinc-800">
                 <div className="text-[10px] text-zinc-400 mb-0.5">قيد الانتظار</div>
-                <div className="text-base font-bold text-amber-400 font-mono">
+                <div className="text-base font-bold text-secondary-400 font-mono">
                   {jobs.filter(j => j.status === 'pending').length}
                 </div>
               </div>
@@ -192,7 +191,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               {/* Card Header */}
               <div className="bg-zinc-800 px-3 py-1.5 border-b border-zinc-700 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-1.5 truncate">
-                  <span className="font-bold text-xs text-orange-300 font-mono truncate">
+                  <span className="font-bold text-xs text-primary-300 font-mono truncate">
                     Printer: {printer.id.toUpperCase()}
                   </span>
                   <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">({printer.nameAr})</span>
@@ -201,9 +200,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
               {/* Single Column: Pending Jobs */}
               <div className="flex flex-col flex-1 overflow-hidden min-h-0">
-                <div className="bg-amber-950/30 text-amber-400 text-[11px] font-bold px-2.5 py-1 flex items-center justify-between border-b border-amber-900/30 shrink-0">
+                <div className="bg-secondary-950/30 text-secondary-400 text-[11px] font-bold px-2.5 py-1 flex items-center justify-between border-b border-secondary-900/30 shrink-0">
                   <span>قيد الانتظار</span>
-                  <span className="bg-amber-500/20 px-1.5 py-0.2 rounded font-mono text-amber-300 text-[10px]">
+                  <span className="bg-secondary-500/20 px-1.5 py-0.2 rounded font-mono text-secondary-300 text-[10px]">
                     {pendingJobs.length}
                   </span>
                 </div>

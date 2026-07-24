@@ -25,7 +25,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
         
         {/* Total Orders */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg flex items-center gap-4">
-          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400">
+          <div className="p-3 bg-secondary-500/10 border border-secondary-500/20 rounded-xl text-secondary-400">
             <Activity className="w-6 h-6" />
           </div>
           <div>
@@ -73,7 +73,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400">
+            <div className="p-2 bg-secondary-500/10 rounded-xl text-secondary-400">
               <BarChart3 className="w-5 h-5" />
             </div>
             <div>

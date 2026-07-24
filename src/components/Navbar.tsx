@@ -59,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     switch (config.notificationColor) {
       case 'blue': return 'bg-blue-600 border-blue-500 hover:bg-blue-500';
       case 'green': return 'bg-emerald-600 border-emerald-500 hover:bg-emerald-500';
-      case 'orange': return 'bg-orange-500 border-orange-400 hover:bg-orange-400';
+      case 'orange': return 'bg-orange-600 border-orange-500 hover:bg-orange-500';
       case 'purple': return 'bg-purple-600 border-purple-500 hover:bg-purple-500';
       default: return 'bg-red-600 border-red-500 hover:bg-red-500';
     }
@@ -128,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Start Section (Right in RTL): Brand & Title */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="relative flex items-center justify-center w-7 h-7 rounded-full border-2 border-orange-500 overflow-hidden shrink-0 shadow-sm">
+          <div className="relative flex items-center justify-center w-7 h-7 rounded-full border-2 border-primary-500 overflow-hidden shrink-0 shadow-sm">
             <div className="absolute inset-0 bg-zinc-700"></div>
             <span className="relative z-10 font-black italic text-xs text-white font-mono" style={{ textShadow: '1px 1px 0px rgba(0,0,0,0.5)' }}>GT</span>
           </div>
@@ -146,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('kanban')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'kanban'
-                ? 'bg-orange-600 text-white shadow-sm'
+                ? 'bg-primary-600 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
@@ -163,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('compact')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'compact'
-                ? 'bg-orange-600 text-white shadow-sm'
+                ? 'bg-primary-600 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
@@ -175,7 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('stats')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'stats'
-                ? 'bg-orange-600 text-white shadow-sm'
+                ? 'bg-primary-600 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
@@ -186,7 +186,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'settings'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-secondary-600 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
@@ -213,7 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="تعديل مسار الشبكة"
           >
             <span className="text-zinc-400 text-[10px]">المسار:</span>
-            <code className="text-orange-300 text-[11px] font-mono max-w-[110px] xl:max-w-[150px] truncate dir-ltr">
+            <code className="text-primary-300 text-[11px] font-mono max-w-[110px] xl:max-w-[150px] truncate dir-ltr">
               {config.basePath}
             </code>
           </button>
@@ -228,8 +228,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Minus className="w-3 h-3" />
             </button>
             <div className="flex flex-col items-center px-1.5 min-w-[55px]">
-              <span className="text-[9px] text-zinc-500 font-bold -mb-0.5 cursor-pointer hover:text-orange-300" onClick={resetToToday} title="العودة لليوم">تاريخ العمل</span>
-              <span className="font-mono text-orange-400 font-bold text-xs dir-ltr">
+              <span className="text-[9px] text-zinc-500 font-bold -mb-0.5 cursor-pointer hover:text-primary-300" onClick={resetToToday} title="العودة لليوم">تاريخ العمل</span>
+              <span className="font-mono text-primary-400 font-bold text-xs dir-ltr">
                 {config.currentDate}
               </span>
             </div>
@@ -304,7 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </button>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                           <span className="text-[10px] text-zinc-400">الطابعة: <strong className="text-orange-300 font-mono">{job.printer.toUpperCase()}</strong></span>
+                           <span className="text-[10px] text-zinc-400">الطابعة: <strong className="text-primary-300 font-mono">{job.printer.toUpperCase()}</strong></span>
                            <span className="text-[10px] bg-zinc-800 px-1 rounded text-zinc-300">{new Date(job.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
@@ -323,7 +323,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="p-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-md text-zinc-300 hover:text-white transition-all shrink-0"
             title="تحديث تلقائي للملفات"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-orange-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-primary-400 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
 
           {/* TV Display Mode */}
@@ -333,7 +333,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold px-2 py-1 rounded-md transition-all text-xs shrink-0"
             title="فتح شاشة العرض للقسم (بدون تحكم)"
           >
-            <MonitorPlay className="w-3.5 h-3.5 text-blue-400" />
+            <MonitorPlay className="w-3.5 h-3.5 text-secondary-400" />
             <span className="hidden sm:inline">شاشة العرض</span>
           </button>
 

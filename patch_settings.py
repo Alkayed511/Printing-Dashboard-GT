@@ -1,105 +1,97 @@
+import re
+
 with open("src/components/SettingsTab.tsx", "r") as f:
     text = f.read()
 
-text = text.replace("import { HardDrive, RefreshCw, Calendar, CheckCircle2, Network, HelpCircle, Save, Settings } from 'lucide-react';", "import { HardDrive, RefreshCw, Calendar, CheckCircle2, Network, HelpCircle, Save, Settings, Bell, Palette, Clock } from 'lucide-react';")
-
-text = text.replace(
-    "const [autoRefreshInterval, setAutoRefreshInterval] = useState(config.autoRefreshInterval);",
-    """const [autoRefreshInterval, setAutoRefreshInterval] = useState(config.autoRefreshInterval);
-  const [notificationSound, setNotificationSound] = useState(config.notificationSound || 'default');
+# Add states
+old_states = """  const [notificationSound, setNotificationSound] = useState(config.notificationSound || 'default');
   const [notificationColor, setNotificationColor] = useState(config.notificationColor || 'red');
   const [notificationDuration, setNotificationDuration] = useState(config.notificationDuration || 0);"""
-)
 
-text = text.replace(
-    "setAutoRefreshInterval(config.autoRefreshInterval);",
-    """setAutoRefreshInterval(config.autoRefreshInterval);
-    setNotificationSound(config.notificationSound || 'default');
+new_states = """  const [notificationSound, setNotificationSound] = useState(config.notificationSound || 'default');
+  const [notificationColor, setNotificationColor] = useState(config.notificationColor || 'red');
+  const [notificationDuration, setNotificationDuration] = useState(config.notificationDuration || 0);
+  const [disableMouseInDisplayMode, setDisableMouseInDisplayMode] = useState(config.disableMouseInDisplayMode || false);
+  const [themeColor, setThemeColor] = useState(config.themeColor || 'orange');"""
+
+text = text.replace(old_states, new_states)
+
+old_effect = """    setNotificationSound(config.notificationSound || 'default');
     setNotificationColor(config.notificationColor || 'red');
-    setNotificationDuration(config.notificationDuration || 0);"""
-)
+    setNotificationDuration(config.notificationDuration || 0);
+  }, [config]);"""
 
-text = text.replace(
-    "autoRefreshInterval,\n    });",
-    """autoRefreshInterval,
-      notificationSound,
+new_effect = """    setNotificationSound(config.notificationSound || 'default');
+    setNotificationColor(config.notificationColor || 'red');
+    setNotificationDuration(config.notificationDuration || 0);
+    setDisableMouseInDisplayMode(config.disableMouseInDisplayMode || false);
+    setThemeColor(config.themeColor || 'orange');
+  }, [config]);"""
+
+text = text.replace(old_effect, new_effect)
+
+old_submit = """      notificationSound,
       notificationColor,
       notificationDuration,
     });"""
-)
 
-new_ui = """
-          <hr className="border-zinc-800" />
+new_submit = """      notificationSound,
+      notificationColor,
+      notificationDuration,
+      disableMouseInDisplayMode,
+      themeColor,
+    });"""
 
-          {/* Notifications Settings */}
-          <div className="space-y-4">
+text = text.replace(old_submit, new_submit)
+
+# Add UI for theme and mouse
+old_ui = """          <div className="pt-6 flex items-center justify-end border-t border-zinc-800">"""
+
+new_ui = """          <div className="space-y-4">
             <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
-              <Bell className="w-5 h-5 text-purple-400" />
-              إعدادات التنبيهات
+              <Settings className="w-5 h-5 text-blue-400" />
+              إعدادات شاشة العرض والمظهر
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Sound */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-zinc-400" />
-                  صوت التنبيه
-                </label>
-                <select
-                  value={notificationSound}
-                  onChange={(e) => setNotificationSound(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="default">الافتراضي (جرس)</option>
-                  <option value="alt1">نغمة سريعة</option>
-                  <option value="alt2">نغمة هادئة</option>
-                  <option value="off">إيقاف الصوت</option>
-                </select>
-              </div>
-
-              {/* Color */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
                   <Palette className="w-4 h-4 text-zinc-400" />
-                  لون شريط التنبيه
+                  لون الواجهة الرئيسي (الثيم)
                 </label>
                 <select
-                  value={notificationColor}
-                  onChange={(e) => setNotificationColor(e.target.value)}
+                  value={themeColor}
+                  onChange={(e) => setThemeColor(e.target.value)}
                   className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-blue-500"
                 >
-                  <option value="red">أحمر (افتراضي)</option>
-                  <option value="orange">برتقالي</option>
+                  <option value="orange">برتقالي (الافتراضي)</option>
                   <option value="blue">أزرق</option>
                   <option value="green">أخضر</option>
                   <option value="purple">بنفسجي</option>
                 </select>
               </div>
 
-              {/* Duration */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-zinc-400" />
-                  مدة بقاء التنبيه
+              <div className="space-y-2 flex flex-col justify-center">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={disableMouseInDisplayMode}
+                    onChange={(e) => setDisableMouseInDisplayMode(e.target.checked)}
+                    className="w-5 h-5 rounded border-zinc-700 text-blue-500 focus:ring-blue-500 bg-zinc-900"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-zinc-200">تعطيل الماوس في شاشة العرض</span>
+                    <span className="text-xs text-zinc-400">منع التفاعل مع البطاقات عند فتح وضع شاشة العرض</span>
+                  </div>
                 </label>
-                <select
-                  value={notificationDuration}
-                  onChange={(e) => setNotificationDuration(Number(e.target.value))}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-blue-500"
-                >
-                  <option value={0}>إبقاء حتى التأكيد (يدوي)</option>
-                  <option value={5}>يختفي بعد 5 ثوانٍ</option>
-                  <option value={10}>يختفي بعد 10 ثوانٍ</option>
-                  <option value={30}>يختفي بعد 30 ثانية</option>
-                </select>
               </div>
             </div>
           </div>
-
+          
           <hr className="border-zinc-800" />
-"""
+""" + old_ui
 
-text = text.replace("          {/* Directory Structure Preview */}", new_ui + "\n          {/* Directory Structure Preview */}")
+text = text.replace(old_ui, new_ui)
 
 with open("src/components/SettingsTab.tsx", "w") as f:
     f.write(text)

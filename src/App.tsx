@@ -8,6 +8,7 @@ import { SettingsTab } from './components/SettingsTab';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
 
+// Safelist for dynamic themes: primary-orange primary-blue primary-green primary-purple primary-rose secondary-orange secondary-blue secondary-green secondary-purple secondary-rose
 export default function App() {
   const isDisplayMode = new URLSearchParams(window.location.search).get('display') === 'true';
   const [jobs, setJobs] = useState<PrintJob[]>([]);
@@ -36,7 +37,7 @@ export default function App() {
   // Fetch Config
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch('/api/config');
+      const res = await fetch(`/api/config?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         setConfig(data);
@@ -65,7 +66,7 @@ export default function App() {
   const fetchFiles = useCallback(async () => {
     try {
       setIsRefreshing(true);
-      const res = await fetch('/api/files');
+      const res = await fetch(`/api/files?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         setJobs(data.jobs || []);
@@ -126,13 +127,22 @@ export default function App() {
   }, [fetchConfig, fetchFiles]);
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('primary-orange', 'primary-blue', 'primary-green', 'primary-purple', 'primary-rose');
+    root.classList.remove('secondary-orange', 'secondary-blue', 'secondary-green', 'secondary-purple', 'secondary-rose');
+    root.classList.add(`primary-${config.themeColor || 'orange'}`);
+    root.classList.add(`secondary-${config.secondaryColor || 'blue'}`);
+  }, [config.themeColor, config.secondaryColor]);
+
+  useEffect(() => {
     if (config.autoRefreshInterval > 0) {
       const interval = setInterval(() => {
         fetchFiles();
+        fetchConfig();
       }, config.autoRefreshInterval * 1000);
       return () => clearInterval(interval);
     }
-  }, [config.autoRefreshInterval, fetchFiles]);
+  }, [config.autoRefreshInterval, fetchFiles, fetchConfig]);
 
   useEffect(() => {
     if (isFirstLoadRef.current) {
@@ -162,34 +172,37 @@ export default function App() {
           const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
           if (AudioContextClass) {
             const ctx = new AudioContextClass();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
             
+            const playNote = (frequency: number, startTime: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.2) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = type;
+              osc.frequency.setValueAtTime(frequency, startTime);
+              
+              gain.gain.setValueAtTime(0, startTime);
+              gain.gain.linearRampToValueAtTime(volume, startTime + duration * 0.1);
+              gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+              
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              
+              osc.start(startTime);
+              osc.stop(startTime + duration);
+            };
+
+            const now = ctx.currentTime;
             if (config.notificationSound === 'alt1') {
-              osc.type = 'square';
-              osc.frequency.setValueAtTime(600, ctx.currentTime);
-              osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-              gain.gain.setValueAtTime(0.1, ctx.currentTime);
-              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-              osc.start(ctx.currentTime);
-              osc.stop(ctx.currentTime + 0.1);
+              // Quick alert
+              playNote(523.25, now, 0.15, 'square', 0.1); // C5
+              playNote(659.25, now + 0.15, 0.2, 'square', 0.1); // E5
             } else if (config.notificationSound === 'alt2') {
-              osc.type = 'sine';
-              osc.frequency.setValueAtTime(400, ctx.currentTime);
-              gain.gain.setValueAtTime(0.2, ctx.currentTime);
-              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-              osc.start(ctx.currentTime);
-              osc.stop(ctx.currentTime + 0.3);
+              // Gentle chime
+              playNote(440, now, 0.4, 'sine', 0.15); // A4
+              playNote(554.37, now + 0.2, 0.4, 'sine', 0.15); // C#5
             } else {
-              // Default
-              osc.type = 'sine';
-              osc.frequency.setValueAtTime(880, ctx.currentTime);
-              gain.gain.setValueAtTime(0.2, ctx.currentTime);
-              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-              osc.start(ctx.currentTime);
-              osc.stop(ctx.currentTime + 0.2);
+              // Default (Positive Ding)
+              playNote(523.25, now, 0.2, 'sine', 0.2); // C5
+              playNote(783.99, now + 0.15, 0.4, 'sine', 0.2); // G5
             }
           }
         } catch (e) {
@@ -223,7 +236,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-blue-500 selection:text-white dir-rtl text-right select-none">
+    <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-secondary-500 selection:text-white dir-rtl text-right select-none`}>
       {!isDisplayMode && <Navbar
         config={config}
         activeTab={activeTab}
@@ -235,6 +248,7 @@ export default function App() {
         totalJobsCount={jobs.length}
         pendingJobsCount={jobs.filter(j => j.status === 'pending').length}
         unacknowledgedJobs={unacknowledgedJobs}
+        recentJobs={[...jobs].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 30)}
       />}
 
       {unacknowledgedJobs.length > 0 && (
@@ -255,7 +269,7 @@ export default function App() {
         </div>
       )}
 
-      <main className={`flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0 ${isDisplayMode ? 'pointer-events-none' : ''}`}>
+      <main className={`flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0 ${isDisplayMode && config.disableMouseInDisplayMode ? 'pointer-events-none' : ''}`}>
         {activeTab === 'kanban' && (
           <KanbanBoard
             jobs={jobs}

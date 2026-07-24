@@ -69,7 +69,7 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
                     >
                       <span
                         onClick={() => onSelectJob(job)}
-                        className="truncate cursor-pointer hover:text-blue-300 font-medium flex-1"
+                        className="truncate cursor-pointer hover:text-secondary-300 font-medium flex-1"
                       >
                         {job.filename}
                       </span>

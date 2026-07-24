@@ -28,7 +28,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 bg-zinc-900/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/20 text-orange-400 rounded-lg">
+            <div className="p-2 bg-primary-500/20 text-primary-400 rounded-lg">
               <FileDown className="w-5 h-5" />
             </div>
             <h2 className="text-lg font-bold text-zinc-100">استخراج تقارير الجرد</h2>
@@ -53,7 +53,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
                 onClick={() => setReportType('daily')}
                 className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all ${
                   reportType === 'daily'
-                    ? 'bg-orange-600/20 border-orange-500 text-orange-300'
+                    ? 'bg-primary-600/20 border-primary-500 text-primary-300'
                     : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300'
                 }`}
               >
@@ -66,7 +66,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
                 onClick={() => setReportType('monthly')}
                 className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all ${
                   reportType === 'monthly'
-                    ? 'bg-orange-600/20 border-orange-500 text-orange-300'
+                    ? 'bg-primary-600/20 border-primary-500 text-primary-300'
                     : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300'
                 }`}
               >
@@ -79,7 +79,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
                 onClick={() => setReportType('custom')}
                 className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all ${
                   reportType === 'custom'
-                    ? 'bg-orange-600/20 border-orange-500 text-orange-300'
+                    ? 'bg-primary-600/20 border-primary-500 text-primary-300'
                     : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300'
                 }`}
               >
@@ -98,7 +98,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-orange-500"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-primary-500"
                 />
               </div>
             )}
@@ -110,7 +110,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
                   type="month"
                   value={startDate.substring(0, 7)}
                   onChange={(e) => setStartDate(e.target.value + '-01')}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-orange-500"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-primary-500"
                 />
               </div>
             )}
@@ -123,7 +123,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-orange-500"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-primary-500"
                   />
                 </div>
                 <div className="space-y-2">
@@ -132,7 +132,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-orange-500"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-primary-500"
                   />
                 </div>
               </div>
@@ -152,7 +152,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ onClose })
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-6 py-2 text-sm font-bold text-white bg-orange-600 hover:bg-orange-500 rounded-lg shadow-sm transition-all"
+            className="flex items-center gap-2 px-6 py-2 text-sm font-bold text-white bg-primary-600 hover:bg-primary-500 rounded-lg shadow-sm transition-all"
           >
             <FileDown className="w-4 h-4" />
             <span>عرض وطباعة (PDF)</span>

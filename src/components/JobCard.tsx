@@ -37,7 +37,7 @@ export const JobCard: React.FC<JobCardProps> = ({
       className={`group relative p-2 rounded-md border transition-all ${
         isDone
           ? 'bg-zinc-900/90 border-emerald-900/40 hover:border-emerald-700/50 opacity-80'
-          : 'bg-zinc-800/60 border-zinc-700/60 hover:border-orange-500/50'
+          : 'bg-zinc-800/60 border-zinc-700/60 hover:border-primary-500/50'
       }`}
     >
       {/* Header: Filename & Actions */}
@@ -45,7 +45,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         <div 
           onClick={() => onSelectJob(job)}
           className={`text-xs font-mono truncate font-semibold cursor-pointer ${
-            isDone ? 'text-zinc-400 line-through' : 'text-zinc-200 hover:text-orange-300'
+            isDone ? 'text-zinc-400 line-through' : 'text-zinc-200 hover:text-primary-300'
           }`}
           title={job.filename}
         >
@@ -84,7 +84,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         {isDone ? (
           <button
             onClick={() => onMoveJob(job.id, 'pending')}
-            className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-bold px-2 py-0.5 rounded bg-amber-950/40 text-[10px]"
+            className="text-secondary-400 hover:text-secondary-300 flex items-center gap-1 font-bold px-2 py-0.5 rounded bg-secondary-950/40 text-[10px]"
             title="إعادة للانتظار"
           >
             <RotateCcw className="w-3 h-3" />
