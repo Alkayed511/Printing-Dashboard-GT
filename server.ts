@@ -15,7 +15,10 @@ let serverConfig: ServerConfig = {
   currentDate: `${new Date().getDate()}-${new Date().getMonth() + 1}`, // e.g., '22-7'
   autoRefreshInterval: 5, // 5 seconds default
   isRealStorageAvailable: false,
-  activePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`
+  activePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`,
+  notificationSound: 'default',
+  notificationColor: 'red',
+  notificationDuration: 0,
 };
 
 const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];

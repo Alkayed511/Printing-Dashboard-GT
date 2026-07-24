@@ -54,6 +54,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
   const unacknowledgedCount = unacknowledgedJobs.length;
 
+
+  const getBellColorClass = () => {
+    switch (config.notificationColor) {
+      case 'blue': return 'bg-blue-600 border-blue-500 hover:bg-blue-500';
+      case 'green': return 'bg-emerald-600 border-emerald-500 hover:bg-emerald-500';
+      case 'orange': return 'bg-orange-500 border-orange-400 hover:bg-orange-400';
+      case 'purple': return 'bg-purple-600 border-purple-500 hover:bg-purple-500';
+      default: return 'bg-red-600 border-red-500 hover:bg-red-500';
+    }
+  };
+
   const adjustDate = (days: number) => {
     try {
       const dateStr = (config.currentDate || '').trim();
@@ -237,7 +248,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
               className={`relative p-1.5 rounded-md border transition-all shrink-0 ${
                 unacknowledgedCount > 0
-                  ? 'bg-red-600 text-white border-red-500 hover:bg-red-500 shadow-md animate-pulse'
+                  ? `${getBellColorClass()} text-white shadow-md animate-pulse`
                   : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300 hover:text-white'
               }`}
               title={unacknowledgedCount > 0 ? `تنبيه: ${unacknowledgedCount} طلب جديد` : 'لا توجد تنبيهات جديدة'}

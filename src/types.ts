@@ -35,6 +35,9 @@ export interface ServerConfig {
   autoRefreshInterval: number; // in seconds, 0 = off
   isRealStorageAvailable: boolean;
   activePath: string;
+  notificationSound?: string;
+  notificationColor?: string;
+  notificationDuration?: number;
 }
 
 export interface PrintStats {
