@@ -132,6 +132,17 @@ let mockJobs: PrintJob[] = [
   }
 ];
 
+let globalOrderCounter = 1001;
+const filePathToOrderMap = new Map<string, string>();
+
+function getOrderId(dateDirName: string, printer: string, filename: string): string {
+  const key = `${dateDirName}:${printer}:${filename}`;
+  if (filePathToOrderMap.has(key)) return filePathToOrderMap.get(key)!;
+  const newId = (globalOrderCounter++).toString();
+  filePathToOrderMap.set(key, newId);
+  return newId;
+}
+
 // Helper: check if a target path is real on local disk
 function scanDateDirectory(dateDir: string): PrintJob[] {
     const realJobs: PrintJob[] = [];
@@ -146,7 +157,7 @@ function scanDateDirectory(dateDir: string): PrintJob[] {
             const filePath = path.join(printerDir, entry.name);
             const stats = fs.statSync(filePath);
             realJobs.push({
-              id: `real-${printer}-${entry.name}`,
+              id: getOrderId(path.basename(dateDir), printer, entry.name),
               filename: entry.name,
               printer: printer as PrinterType,
               status: 'pending',
@@ -169,7 +180,7 @@ function scanDateDirectory(dateDir: string): PrintJob[] {
             const filePath = path.join(doneDir, entry.name);
             const stats = fs.statSync(filePath);
             realJobs.push({
-              id: `real-${printer}-done-${entry.name}`,
+              id: getOrderId(path.basename(dateDir), printer, entry.name),
               filename: entry.name,
               printer: printer as PrinterType,
               status: 'done',
@@ -339,17 +350,9 @@ app.post('/api/files/move', (req: Request, res: Response) => {
     mockJobs[jobIndex].updatedAt = new Date().toISOString();
     if (!filename) filename = mockJobs[jobIndex].filename;
     if (!reqPrinter) printer = mockJobs[jobIndex].printer;
-  } else if (id.startsWith('real-')) {
-    for (const p of DEFAULT_PRINTERS) {
-      if (id.startsWith(`real-${p}-done-`)) {
-        printer = p;
-        if (!filename) filename = id.replace(`real-${p}-done-`, '');
-        break;
-      } else if (id.startsWith(`real-${p}-`)) {
-        printer = p;
-        if (!filename) filename = id.replace(`real-${p}-`, '');
-        break;
-      }
+  } else {
+    if (!filename || !printer) {
+      return res.status(400).json({ error: 'Filename and printer are required for real files' });
     }
   }
 
@@ -359,6 +362,7 @@ app.post('/api/files/move', (req: Request, res: Response) => {
   const doneDir = path.join(printerDir, 'done');
 
   let fileMovedOnDisk = false;
+
 
   try {
     if (filename) {
