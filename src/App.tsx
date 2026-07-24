@@ -29,10 +29,8 @@ export default function App() {
 
   // Acknowledge new order alerts & stop sound
   const handleAcknowledgeAlert = useCallback(() => {
-    unacknowledgedJobs.forEach((j) => seenJobIdsRef.current.add(j.id));
-    jobs.forEach((j) => seenJobIdsRef.current.add(j.id));
     setUnacknowledgedJobs([]);
-  }, [jobs, unacknowledgedJobs]);
+  }, []);
 
   // Fetch Config
   const fetchConfig = useCallback(async () => {
@@ -147,6 +145,7 @@ export default function App() {
     );
 
     if (newJobs.length > 0) {
+      newJobs.forEach(j => seenJobIdsRef.current.add(j.id));
       setUnacknowledgedJobs((prev) => {
         const combined = [...prev];
         newJobs.forEach((nj) => {
