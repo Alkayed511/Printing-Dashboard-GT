@@ -165,18 +165,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BarChart3 className="w-3.5 h-3.5" />
             <span>الإحصائيات</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('code')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'code'
-                ? 'bg-orange-600 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
-            }`}
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            <span>Python كود</span>
-          </button>
         </nav>
 
         {/* End Section (Left in RTL): Stats, Path, Work Date, Notification, Refresh, Inventory & New Order */}

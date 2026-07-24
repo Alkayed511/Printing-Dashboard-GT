@@ -26,7 +26,7 @@ export default function App() {
     activePath: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats' | 'code'>('kanban');
+  const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats'>('kanban');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isNewJobOpen, setIsNewJobOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -279,12 +279,6 @@ export default function App() {
         {activeTab === 'stats' && (
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <StatsOverview jobs={jobs} />
-          </div>
-        )}
-
-        {activeTab === 'code' && (
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
-            <StreamlitExport basePath={config.basePath} />
           </div>
         )}
       </main>
