@@ -34,6 +34,47 @@ app.use((req, res, next) => {
   next();
 });
 
+// Legacy browser detection (Safari < 11, OS X 10.11, SmartTVs)
+function isLegacyUserAgent(ua: string = '', query: any = {}): boolean {
+  if (query.legacy === 'true') return true;
+  if (!ua) return false;
+  return /Version\/(7|8|9|10|11)\./i.test(ua) ||
+         /AppleWebKit\/(5|600|601|602)\./i.test(ua) ||
+         /Mac OS X 10_(9|10|11|12)/i.test(ua) ||
+         /SmartTV|Tizen|WebOS|NetCast|Opera TV/i.test(ua);
+}
+
+function getDistBundleAssets() {
+  const distAssetsPath = path.join(process.cwd(), 'dist', 'assets');
+  if (!fs.existsSync(distAssetsPath)) return null;
+
+  try {
+    const files = fs.readdirSync(distAssetsPath);
+    const jsFile = files.find(f => f.endsWith('.js'));
+    const cssFile = files.find(f => f.endsWith('.css'));
+
+    if (!jsFile) return null;
+    return {
+      jsUrl: `/assets/${jsFile}`,
+      cssUrl: cssFile ? `/assets/${cssFile}` : null,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+// Endpoint to expose bundled asset locations for legacy browsers
+app.get('/api/bundle-info', (req: Request, res: Response) => {
+  const assets = getDistBundleAssets();
+  res.json(assets || { jsUrl: null, cssUrl: null });
+});
+
+// Serve static compiled assets from /dist/assets if available
+const distAssetsDir = path.join(process.cwd(), 'dist', 'assets');
+if (fs.existsSync(distAssetsDir)) {
+  app.use('/assets', express.static(distAssetsDir));
+}
+
 // Default configuration
 let serverConfig: ServerConfig = {
   basePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share', // Default Windows SMB/Network path
@@ -605,6 +646,34 @@ function getPrinterColor(p: PrinterType): string {
 
 // Start Express server with Vite middleware
 async function startServer() {
+  // Ensure build dist exists for legacy display screens
+  try {
+    const distAssetsPath = path.join(process.cwd(), 'dist', 'assets');
+    if (!fs.existsSync(distAssetsPath)) {
+      console.log('Building production bundle for legacy display screen compatibility...');
+      const { execSync } = await import('child_process');
+      execSync('npm run build');
+    }
+  } catch (err) {
+    console.error('Build bundle check failed:', err);
+  }
+
+  // Serve transformed legacy HTML for older browsers (e.g. Safari 9) and display screens
+  app.get(['/', '/index.html'], (req: Request, res: Response, next: any) => {
+    const ua = req.headers['user-agent'] || '';
+    if (isLegacyUserAgent(ua, req.query)) {
+      const distIndexPath = path.join(process.cwd(), 'dist', 'index.html');
+      if (fs.existsSync(distIndexPath)) {
+        let html = fs.readFileSync(distIndexPath, 'utf-8');
+        // Convert module script tag into standard non-module script tag for Safari 9 compatibility
+        html = html.replace(/<script type="module" crossorigin src="([^"]+)"><\/script>/gi, '<script src="$1"></script>');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(html);
+      }
+    }
+    next();
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

@@ -116,7 +116,38 @@
               '<button onclick="window.location.reload()" style="padding:10px 20px;background:#ea580c;color:white;border:none;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;margin-top:10px;">إعادة تحميل الصفحة</button>' +
               '</div>';
           }
-        }, 5000);
+        }, 8000);
+
+        // Check if browser supports ES module scripts (e.g. Safari 9 doesn't)
+        var supportsModule = 'noModule' in document.createElement('script');
+        if (!supportsModule) {
+          function loadLegacyBundle() {
+            if (window.__bundleLoaded) return;
+            window.__bundleLoaded = true;
+            fetch('/api/bundle-info').then(function(res) {
+              return res.json();
+            }).then(function(data) {
+              if (data && data.cssUrl) {
+                var link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = data.cssUrl;
+                document.head.appendChild(link);
+              }
+              if (data && data.jsUrl) {
+                var s = document.createElement('script');
+                s.src = data.jsUrl;
+                document.body.appendChild(s);
+              }
+            }).catch(function(e) {
+              console.error('Failed to load legacy bundle info:', e);
+            });
+          }
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadLegacyBundle);
+          } else {
+            loadLegacyBundle();
+          }
+        }
       })();
     </script>
   </head>

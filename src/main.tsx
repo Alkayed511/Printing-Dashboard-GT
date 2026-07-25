@@ -39,7 +39,7 @@ class ErrorBoundary extends React.Component<Props, State> {
           <div className="bg-zinc-900 border border-primary-500/30 p-8 rounded-2xl max-w-md shadow-2xl space-y-4">
             <h1 className="text-xl font-bold text-primary-400">حدث خطأ في النظام</h1>
             <p className="text-sm text-zinc-400">
-              {this.state.error?.message || 'تعذر تحميل الواجهة بالشكل المطلوب'}
+              {(this.state.error && this.state.error.message) || 'تعذر تحميل الواجهة بالشكل المطلوب'}
             </p>
             <button
               onClick={() => window.location.reload()}

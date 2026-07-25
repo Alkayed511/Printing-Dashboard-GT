@@ -9,6 +9,13 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
     ],
+    esbuild: {
+      target: 'es2018',
+    },
+    build: {
+      target: 'es2018',
+      cssTarget: 'safari9',
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
