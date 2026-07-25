@@ -6,12 +6,48 @@
     <title>نظام تتبع أوامر الطباعة - High Density</title>
     <script>
       (function() {
+        // Ensure globalThis
+        if (typeof globalThis === 'undefined') {
+          window.globalThis = window;
+        }
+
         // AudioContext webkit prefix
         try {
           if (!window.AudioContext && window.webkitAudioContext) {
             window.AudioContext = window.webkitAudioContext;
           }
         } catch (e) {}
+
+        // Polyfill String.prototype.padStart
+        if (!String.prototype.padStart) {
+          String.prototype.padStart = function(targetLength, padString) {
+            targetLength = targetLength >> 0;
+            padString = String(padString !== undefined ? padString : ' ');
+            if (this.length > targetLength) return String(this);
+            targetLength = targetLength - this.length;
+            if (targetLength > padString.length) {
+              padString += padString.repeat(targetLength / padString.length);
+            }
+            return padString.slice(0, targetLength) + String(this);
+          };
+        }
+
+        // Polyfill String.prototype.includes
+        if (!String.prototype.includes) {
+          String.prototype.includes = function(search, start) {
+            'use strict';
+            if (typeof start !== 'number') start = 0;
+            if (start + search.length > this.length) return false;
+            return this.indexOf(search, start) !== -1;
+          };
+        }
+
+        // Polyfill String.prototype.startsWith
+        if (!String.prototype.startsWith) {
+          String.prototype.startsWith = function(search, pos) {
+            return this.substr(!pos || pos < 0 ? 0 : +pos, search.length) === search;
+          };
+        }
 
         // Polyfill URLSearchParams for Safari < 10.3
         if (!window.URLSearchParams) {
@@ -32,13 +68,17 @@
           };
         }
 
-        // Polyfill fetch for Safari < 10.1
-        if (!window.fetch) {
+        // Robust fetch polyfill supporting absolute & relative URLs
+        if (!window.fetch || window.fetch.toString().indexOf('native') === -1) {
           window.fetch = function(url, options) {
             options = options || {};
             return new Promise(function(resolve, reject) {
               var request = new XMLHttpRequest();
-              request.open(options.method || 'GET', url, true);
+              var fullUrl = url;
+              if (url && url.indexOf('/') === 0 && window.location && window.location.origin) {
+                fullUrl = window.location.origin + url;
+              }
+              request.open(options.method || 'GET', fullUrl, true);
               if (options.headers) {
                 Object.keys(options.headers).forEach(function(key) {
                   request.setRequestHeader(key, options.headers[key]);
@@ -49,7 +89,13 @@
                   ok: (request.status >= 200 && request.status < 300),
                   status: request.status,
                   statusText: request.statusText,
-                  json: function() { return Promise.resolve(JSON.parse(request.responseText)); },
+                  json: function() {
+                    try {
+                      return Promise.resolve(JSON.parse(request.responseText));
+                    } catch (e) {
+                      return Promise.reject(e);
+                    }
+                  },
                   text: function() { return Promise.resolve(request.responseText); }
                 });
               };
@@ -59,6 +105,18 @@
             });
           };
         }
+
+        // Fallback root renderer if app takes too long or fails to parse JS on very old browsers
+        setTimeout(function() {
+          var rootEl = document.getElementById('root');
+          if (rootEl && (!rootEl.children || rootEl.children.length === 0)) {
+            rootEl.innerHTML = '<div style="direction:rtl;text-align:center;padding:40px 20px;font-family:sans-serif;color:#e4e4e7;background:#09090b;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-center;gap:16px;">' +
+              '<h2 style="font-size:20px;font-weight:bold;color:#f97316;">جاري تحميل نظام شاشة أوامر الطباعة...</h2>' +
+              '<p style="font-size:14px;color:#a1a1aa;max-width:400px;">إذا استمرت هذه الشاشة بالظهور، يرجى إعادة تحميل الصفحة أو التأكد من الاتصال بالشبكة المحلية.</p>' +
+              '<button onclick="window.location.reload()" style="padding:10px 20px;background:#ea580c;color:white;border:none;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;margin-top:10px;">إعادة تحميل الصفحة</button>' +
+              '</div>';
+          }
+        }, 5000);
       })();
     </script>
   </head>
