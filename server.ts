@@ -34,13 +34,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Legacy browser detection (Safari < 11, OS X 10.11, SmartTVs)
+// Legacy browser detection (Safari < 12, Mac OS X 10.x / Mac 2016, SmartTVs)
 function isLegacyUserAgent(ua: string = '', query: any = {}): boolean {
-  if (query.legacy === 'true') return true;
-  if (!ua) return false;
-  return /Version\/(7|8|9|10|11)\./i.test(ua) ||
-         /AppleWebKit\/(5|600|601|602)\./i.test(ua) ||
-         /Mac OS X 10_(9|10|11|12)/i.test(ua) ||
+  if (query.legacy === 'true' || query.display === 'true' || query.mode === 'display') return true;
+  if (!ua) return true;
+  return /Version\/(7|8|9|10|11|12)\./i.test(ua) ||
+         /AppleWebKit\/(5|600|601|602|603|604|605)\./i.test(ua) ||
+         /Mac OS X 10_(6|7|8|9|10|11|12|13|14)/i.test(ua) ||
+         /Macintosh/i.test(ua) ||
          /SmartTV|Tizen|WebOS|NetCast|Opera TV/i.test(ua);
 }
 
@@ -665,8 +666,9 @@ async function startServer() {
       const distIndexPath = path.join(process.cwd(), 'dist', 'index.html');
       if (fs.existsSync(distIndexPath)) {
         let html = fs.readFileSync(distIndexPath, 'utf-8');
-        // Convert module script tag into standard non-module script tag for Safari 9 compatibility
+        // Convert module script tag into standard non-module script tag for Safari 9/10/11 compatibility
         html = html.replace(/<script type="module" crossorigin src="([^"]+)"><\/script>/gi, '<script src="$1"></script>');
+        html = html.replace(/<script type="module" src="([^"]+)"><\/script>/gi, '<script src="$1"></script>');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         return res.send(html);
       }
