@@ -8,9 +8,21 @@ import { SettingsTab } from './components/SettingsTab';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
 
+const checkDisplayMode = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const search = window.location.search || '';
+    if (search.indexOf('display=true') !== -1) return true;
+    if (window.URLSearchParams) {
+      return new URLSearchParams(search).get('display') === 'true';
+    }
+  } catch (e) {}
+  return false;
+};
+
 // Safelist for dynamic themes: primary-orange primary-blue primary-green primary-purple primary-rose secondary-orange secondary-blue secondary-green secondary-purple secondary-rose
 export default function App() {
-  const isDisplayMode = new URLSearchParams(window.location.search).get('display') === 'true';
+  const isDisplayMode = checkDisplayMode();
   const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [unacknowledgedJobs, setUnacknowledgedJobs] = useState<PrintJob[]>([]);
   const seenJobIdsRef = useRef<Set<string>>(new Set());

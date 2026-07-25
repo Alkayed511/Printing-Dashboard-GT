@@ -6,15 +6,59 @@
     <title>نظام تتبع أوامر الطباعة - High Density</title>
     <script>
       (function() {
+        // AudioContext webkit prefix
         try {
-          var origFetch = window.fetch;
-          Object.defineProperty(window, 'fetch', {
-            get: function() { return origFetch; },
-            set: function(v) { origFetch = v; },
-            configurable: true,
-            enumerable: true
-          });
+          if (!window.AudioContext && window.webkitAudioContext) {
+            window.AudioContext = window.webkitAudioContext;
+          }
         } catch (e) {}
+
+        // Polyfill URLSearchParams for Safari < 10.3
+        if (!window.URLSearchParams) {
+          window.URLSearchParams = function(search) {
+            var self = this;
+            self.params = {};
+            if (search && search.indexOf('?') === 0) search = search.substring(1);
+            if (search) {
+              var pairs = search.split('&');
+              for (var i = 0; i < pairs.length; i++) {
+                var parts = pairs[i].split('=');
+                if (parts[0]) {
+                  self.params[decodeURIComponent(parts[0])] = decodeURIComponent((parts[1] || '').replace(/\+/g, ' '));
+                }
+              }
+            }
+            self.get = function(name) { return self.params[name] !== undefined ? self.params[name] : null; };
+          };
+        }
+
+        // Polyfill fetch for Safari < 10.1
+        if (!window.fetch) {
+          window.fetch = function(url, options) {
+            options = options || {};
+            return new Promise(function(resolve, reject) {
+              var request = new XMLHttpRequest();
+              request.open(options.method || 'GET', url, true);
+              if (options.headers) {
+                Object.keys(options.headers).forEach(function(key) {
+                  request.setRequestHeader(key, options.headers[key]);
+                });
+              }
+              request.onload = function() {
+                resolve({
+                  ok: (request.status >= 200 && request.status < 300),
+                  status: request.status,
+                  statusText: request.statusText,
+                  json: function() { return Promise.resolve(JSON.parse(request.responseText)); },
+                  text: function() { return Promise.resolve(request.responseText); }
+                });
+              };
+              request.onerror = function() { reject(new TypeError('Network request failed')); };
+              request.ontimeout = function() { reject(new TypeError('Network request timed out')); };
+              request.send(options.body || null);
+            });
+          };
+        }
       })();
     </script>
   </head>
