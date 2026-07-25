@@ -18,12 +18,14 @@ import {
 import { PrintJob, PrinterType, FileStatus, PrinterInfo } from '../types';
 import { PRINTERS_LIST } from '../data/printers';
 import { JobCard } from './JobCard';
+import { translations } from '../translations';
 
 interface KanbanBoardProps {
   jobs: PrintJob[];
   onMoveJob: (id: string, targetStatus: FileStatus) => void;
   onSelectJob: (job: PrintJob) => void;
   onDeleteJob: (id: string) => void;
+  language?: 'ar' | 'en';
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -31,6 +33,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onMoveJob,
   onSelectJob,
   onDeleteJob,
+  language = 'ar',
 }) => {
   const [selectedPrinterFilter, setSelectedPrinterFilter] = useState<PrinterType | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,6 +69,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     ? PRINTERS_LIST
     : PRINTERS_LIST.filter((p) => p.id === selectedPrinterFilter);
 
+  const t = translations[language];
+
   return (
     <div className="flex-1 w-full flex flex-col overflow-hidden min-h-0 gap-2">
       
@@ -78,7 +83,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="بحث باسم الملف، العميل، نوع الخامة، الأبعاد..."
+            placeholder={t.searchPlaceholder}
             className="w-full bg-zinc-950 border border-zinc-700/80 rounded-md pr-3 pl-8 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-primary-500"
           />
           {searchQuery && (
@@ -86,7 +91,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               onClick={() => setSearchQuery('')}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white"
             >
-              مسح
+              {t.clear}
             </button>
           )}
         </div>
@@ -101,7 +106,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
             }`}
           >
-            الكل ({jobs.length})
+            {t.all} ({jobs.length})
           </button>
 
           {PRINTERS_LIST.map((p) => {
@@ -137,9 +142,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           <div className="flex items-center justify-between w-full border-b border-primary-500/20 pb-2 shrink-0">
             <span className="text-xs font-bold text-primary-300 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-primary-400" />
-              مؤشر الإنتاجية اليومي
+              {t.productivityTitle}
             </span>
-            <span className="text-[10px] bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded font-mono">LIVE</span>
+            <span className="text-[10px] bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded font-mono">{t.live}</span>
           </div>
 
           <div className="flex flex-col items-center justify-center my-auto py-1">
@@ -147,7 +152,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               {jobs.length > 0 ? Math.round((jobs.filter(j => j.status === 'done').length / jobs.length) * 100) : 0}%
             </span>
             <span className="text-[11px] text-primary-300 uppercase tracking-wider mt-1">
-              نسبة إنجاز الأوامر
+              {t.completionRate}
             </span>
           </div>
 
@@ -163,13 +168,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
             <div className="grid grid-cols-2 gap-2 w-full text-center text-xs">
               <div className="bg-zinc-900/80 p-1.5 rounded-md border border-zinc-800">
-                <div className="text-[10px] text-zinc-400 mb-0.5">قيد الانتظار</div>
+                <div className="text-[10px] text-zinc-400 mb-0.5">{t.pending}</div>
                 <div className="text-base font-bold text-secondary-400 font-mono">
                   {jobs.filter(j => j.status === 'pending').length}
                 </div>
               </div>
               <div className="bg-zinc-900/80 p-1.5 rounded-md border border-zinc-800">
-                <div className="text-[10px] text-zinc-400 mb-0.5">مكتمل (done)</div>
+                <div className="text-[10px] text-zinc-400 mb-0.5">{t.completed}</div>
                 <div className="text-base font-bold text-emerald-400 font-mono">
                   {jobs.filter(j => j.status === 'done').length}
                 </div>
@@ -192,16 +197,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <div className="bg-zinc-800 px-3 py-1.5 border-b border-zinc-700 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-1.5 truncate">
                   <span className="font-bold text-xs text-primary-300 font-mono truncate">
-                    Printer: {printer.id.toUpperCase()}
+                    {t.printerPrefix}: {printer.id.toUpperCase()}
                   </span>
-                  <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">({printer.nameAr})</span>
+                  <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">({language === 'ar' ? printer.nameAr : printer.nameEn})</span>
                 </div>
               </div>
 
               {/* Single Column: Pending Jobs */}
               <div className="flex flex-col flex-1 overflow-hidden min-h-0">
                 <div className="bg-secondary-950/30 text-secondary-400 text-[11px] font-bold px-2.5 py-1 flex items-center justify-between border-b border-secondary-900/30 shrink-0">
-                  <span>قيد الانتظار</span>
+                  <span>{t.pending}</span>
                   <span className="bg-secondary-500/20 px-1.5 py-0.2 rounded font-mono text-secondary-300 text-[10px]">
                     {pendingJobs.length}
                   </span>
@@ -210,7 +215,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <div className="p-1.5 flex flex-col gap-1.5 overflow-y-auto scrollbar-thin flex-1 min-h-0">
                   {pendingJobs.length === 0 ? (
                     <div className="p-3 text-center text-xs text-zinc-500 italic my-auto">
-                      لا توجد ملفات
+                      {t.noFiles}
                     </div>
                   ) : (
                     pendingJobs.map((job) => (

@@ -311,6 +311,7 @@ app.post('/api/config', (req: Request, res: Response) => {
   if (disableMouseInDisplayMode !== undefined) serverConfig.disableMouseInDisplayMode = Boolean(disableMouseInDisplayMode);
   if (themeColor !== undefined) serverConfig.themeColor = themeColor;
   if (req.body.secondaryColor !== undefined) serverConfig.secondaryColor = req.body.secondaryColor;
+  if (req.body.language !== undefined) serverConfig.language = req.body.language;
 
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);

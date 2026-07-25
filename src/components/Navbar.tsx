@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { ServerConfig, PrintJob } from '../types';
+import { translations } from '../translations';
 
 interface NavbarProps {
   config: ServerConfig;
@@ -121,6 +122,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const t = translations[config.language || 'ar'];
+
   return (
     <header className="bg-zinc-900 border-b border-zinc-800 text-white sticky top-0 z-30 shadow-md shrink-0">
       {/* Ultra Compact & Balanced Main Navigation Bar */}
@@ -134,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <h1 className="text-xs sm:text-sm font-bold tracking-tight text-zinc-100 whitespace-nowrap">
-              نظام تتبع أوامر الطباعة
+              {t.navAppTitle}
             </h1>
             <span className="text-zinc-500 font-normal text-[10px] font-mono hidden md:inline-block">v2.4.0</span>
           </div>
@@ -151,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Kanban className="w-3.5 h-3.5" />
-            <span>لوحة كانبان</span>
+            <span>{t.navKanban}</span>
             {pendingJobsCount > 0 && (
               <span className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded font-mono">
                 {pendingJobsCount}
@@ -168,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>عرض شبكي</span>
+            <span>{t.navCompact}</span>
           </button>
 
           <button
@@ -180,7 +183,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            <span>الإحصائيات</span>
+            <span>{t.navStats}</span>
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -191,7 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Settings className="w-3.5 h-3.5" />
-            <span>الإعدادات</span>
+            <span>{t.navSettings}</span>
           </button>
 
         </nav>
@@ -201,18 +204,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Summary Stats Badge */}
           <div className="text-[11px] text-zinc-400 font-mono hidden xl:flex items-center gap-2 bg-zinc-950 px-2 py-1 rounded border border-zinc-800/80 shrink-0">
-            <span>المكتمل: <strong className="text-emerald-400 font-bold">{totalJobsCount - pendingJobsCount}</strong></span>
+            <span>{t.navCompleted}: <strong className="text-emerald-400 font-bold">{totalJobsCount - pendingJobsCount}</strong></span>
             <span>•</span>
-            <span>الانتظار: <strong className="text-amber-400 font-bold">{pendingJobsCount}</strong></span>
+            <span>{t.navPending}: <strong className="text-amber-400 font-bold">{pendingJobsCount}</strong></span>
           </div>
 
           {/* Path Badge */}
           <button
             onClick={() => setActiveTab('settings')}
             className="hidden lg:flex bg-zinc-800 hover:bg-zinc-700 px-2 py-1 rounded-md border border-zinc-700 items-center gap-1.5 transition-colors text-xs shrink-0"
-            title="تعديل مسار الشبكة"
           >
-            <span className="text-zinc-400 text-[10px]">المسار:</span>
+            <span className="text-zinc-400 text-[10px]">{t.navPath}:</span>
             <code className="text-primary-300 text-[11px] font-mono max-w-[110px] xl:max-w-[150px] truncate dir-ltr">
               {config.basePath}
             </code>
@@ -223,12 +225,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => adjustDate(-1)}
               className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
-              title="اليوم السابق"
             >
               <Minus className="w-3 h-3" />
             </button>
             <div className="flex flex-col items-center px-1.5 min-w-[55px]">
-              <span className="text-[9px] text-zinc-500 font-bold -mb-0.5 cursor-pointer hover:text-primary-300" onClick={resetToToday} title="العودة لليوم">تاريخ العمل</span>
+              <span className="text-[9px] text-zinc-500 font-bold -mb-0.5 cursor-pointer hover:text-primary-300" onClick={resetToToday}>{t.navWorkDate}</span>
               <span className="font-mono text-primary-400 font-bold text-xs dir-ltr">
                 {config.currentDate}
               </span>
@@ -236,7 +237,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => adjustDate(1)}
               className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
-              title="اليوم التالي"
             >
               <Plus className="w-3 h-3" />
             </button>
@@ -251,7 +251,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? `${getBellColorClass()} text-white shadow-md animate-pulse`
                   : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300 hover:text-white'
               }`}
-              title={unacknowledgedCount > 0 ? `تنبيه: ${unacknowledgedCount} طلب جديد` : 'لا توجد تنبيهات جديدة'}
             >
               {unacknowledgedCount > 0 ? (
                 <BellRing className="w-3.5 h-3.5 text-white" />
@@ -268,7 +267,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isNotificationsOpen && (
               <div className="absolute top-full left-0 mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl z-50 overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 bg-zinc-800/50 border-b border-zinc-800">
-                  <h3 className="font-bold text-xs text-zinc-200">الإشعارات ({unacknowledgedCount})</h3>
+                  <h3 className="font-bold text-xs text-zinc-200">{t.navNotifications} ({unacknowledgedCount})</h3>
                   {unacknowledgedCount > 0 && (
                     <button 
                       onClick={() => {
@@ -278,13 +277,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}
                       className="text-[10px] text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-2 py-1 rounded transition-colors"
                     >
-                      تحديد الكل كمقروء
+                      {t.navMarkAllRead}
                     </button>
                   )}
                 </div>
                 <div className="max-h-64 overflow-y-auto scrollbar-thin p-1">
                   {unacknowledgedJobs.length === 0 ? (
-                    <div className="p-4 text-center text-zinc-500 text-xs">لا توجد إشعارات جديدة</div>
+                    <div className="p-4 text-center text-zinc-500 text-xs">{t.navNoNotifications}</div>
                   ) : (
                     unacknowledgedJobs.map(job => (
                       <div key={job.id} className="flex flex-col gap-1 p-2 hover:bg-zinc-800/50 rounded-md border-b border-zinc-800/50 last:border-0">
@@ -298,13 +297,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                               if (onDismissNotification) onDismissNotification(job.id);
                             }}
                             className="text-zinc-500 hover:text-rose-400 p-0.5 rounded-full hover:bg-zinc-800 transition-colors"
-                            title="حذف الإشعار"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                           <span className="text-[10px] text-zinc-400">الطابعة: <strong className="text-primary-300 font-mono">{job.printer.toUpperCase()}</strong></span>
+                           <span className="text-[10px] text-zinc-400">{t.navPrinter}: <strong className="text-primary-300 font-mono">{job.printer.toUpperCase()}</strong></span>
                            <span className="text-[10px] bg-zinc-800 px-1 rounded text-zinc-300">{new Date(job.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
@@ -321,7 +319,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={onRefresh}
             disabled={isRefreshing}
             className="p-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-md text-zinc-300 hover:text-white transition-all shrink-0"
-            title="تحديث تلقائي للملفات"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-primary-400 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -331,20 +328,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => window.open(window.location.pathname + '?display=true', '_blank')}
             className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold px-2 py-1 rounded-md transition-all text-xs shrink-0"
-            title="فتح شاشة العرض للقسم (بدون تحكم)"
           >
             <MonitorPlay className="w-3.5 h-3.5 text-secondary-400" />
-            <span className="hidden sm:inline">شاشة العرض</span>
+            <span className="hidden sm:inline">{t.navDisplay}</span>
           </button>
 
           {/* Export */}
           <button
             onClick={onOpenExport}
             className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold px-2 py-1 rounded-md transition-all text-xs shrink-0"
-            title="تصدير تقرير الجرد"
           >
             <FileDown className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">جرد</span>
+            <span className="hidden sm:inline">{t.navExport}</span>
           </button>
 
         </div>

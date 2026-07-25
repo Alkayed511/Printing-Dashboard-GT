@@ -42,6 +42,7 @@ export interface ServerConfig {
   themeColor?: string;
   secondaryColor?: string;
   localIp?: string;
+  language?: 'ar' | 'en';
 }
 
 export interface PrintStats {

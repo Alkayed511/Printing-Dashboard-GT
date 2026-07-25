@@ -2,18 +2,23 @@ import React from 'react';
 import { PrintJob, PrinterType, FileStatus } from '../types';
 import { PRINTERS_LIST } from '../data/printers';
 import { Printer, CheckCircle2, Clock, ArrowLeft, ArrowRight, Layers } from 'lucide-react';
+import { translations } from '../translations';
 
 interface CompactGridProps {
   jobs: PrintJob[];
   onMoveJob: (id: string, targetStatus: FileStatus) => void;
   onSelectJob: (job: PrintJob) => void;
+  language?: 'ar' | 'en';
 }
 
 export const CompactGrid: React.FC<CompactGridProps> = ({
   jobs,
   onMoveJob,
   onSelectJob,
+  language = 'ar',
 }) => {
+  const t = translations[language];
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {PRINTERS_LIST.map((printer) => {
@@ -36,17 +41,17 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
                   <Printer className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-zinc-100">{printer.nameAr}</h3>
+                  <h3 className="font-bold text-sm text-zinc-100">{language === 'ar' ? printer.nameAr : printer.nameEn}</h3>
                   <span className="text-[10px] text-zinc-400 font-mono">{printer.id.toUpperCase()}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 text-xs">
                 <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/40 font-bold">
-                  {pending.length} معلق
+                  {pending.length} {t.pendingShort}
                 </span>
                 <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 font-bold">
-                  {done.length} تم
+                  {done.length} {t.doneShort}
                 </span>
               </div>
             </div>
@@ -55,11 +60,11 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
             <div className="space-y-2 flex-1">
               <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
-                <span>أوامر معلقة ({pending.length})</span>
+                <span>{t.pendingJobs} ({pending.length})</span>
               </h4>
 
               {pending.length === 0 ? (
-                <p className="text-xs text-zinc-500 italic py-2">لا توجد ملفات معلقة</p>
+                <p className="text-xs text-zinc-500 italic py-2">{t.noPendingFiles}</p>
               ) : (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
                   {pending.map((job) => (
@@ -79,7 +84,6 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
                       <button
                         onClick={() => onMoveJob(job.id, 'done')}
                         className="p-1 text-emerald-400 hover:bg-emerald-950/50 rounded transition-colors shrink-0"
-                        title="إنهاء الأمر"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
@@ -93,13 +97,13 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
             <div className="pt-2 border-t border-zinc-800/60">
               <h4 className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 mb-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>مكتمل مؤخراً ({done.length})</span>
+                <span>{t.recentlyCompleted} ({done.length})</span>
               </h4>
               {done.length === 0 ? (
-                <p className="text-[11px] text-zinc-500 italic">لا توجد ملفات مكتملة</p>
+                <p className="text-[11px] text-zinc-500 italic">{t.noCompletedFiles}</p>
               ) : (
                 <p className="text-xs text-zinc-400 truncate">
-                  آخر ملف: <strong className="text-zinc-200">{done[0].filename}</strong>
+                  {t.lastFile} <strong className="text-zinc-200">{done[0].filename}</strong>
                 </p>
               )}
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PrintJob, PrinterType, FileStatus, ServerConfig } from './types';
+import { translations } from './translations';
 import { Navbar } from './components/Navbar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CompactGrid } from './components/CompactGrid';
@@ -235,8 +236,10 @@ export default function App() {
     }
   };
 
+  const t = translations[config.language || 'ar'];
+
   return (
-    <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-secondary-500 selection:text-white dir-rtl text-right select-none`}>
+    <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-secondary-500 selection:text-white ${config.language === 'en' ? 'dir-ltr text-left' : 'dir-rtl text-right'} select-none`}>
       {!isDisplayMode && <Navbar
         config={config}
         activeTab={activeTab}
@@ -256,15 +259,15 @@ export default function App() {
           <div className="flex items-center gap-3 font-bold">
             <span className="w-3 h-3 bg-white rounded-full animate-ping shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
             <div>
-              <div className="text-sm opacity-90 font-normal">تنبيه طلبات جديدة</div>
-              <div className="text-lg">يوجد {unacknowledgedJobs.length} ملفات جديدة بانتظار الطباعة!</div>
+              <div className="text-sm opacity-90 font-normal">{t.newJobsAlertTitle}</div>
+              <div className="text-lg">{t.newJobsAlertCount} {unacknowledgedJobs.length} {t.newJobsAlertDesc}</div>
             </div>
           </div>
           {!isDisplayMode && <button 
             onClick={handleAcknowledgeAlert}
             className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors pointer-events-auto"
           >
-            إخفاء
+            {t.hideAlert}
           </button>}
         </div>
       )}
@@ -276,6 +279,7 @@ export default function App() {
             onMoveJob={handleMoveJob}
             onSelectJob={setSelectedJobDetails}
             onDeleteJob={handleDeleteJob}
+            language={config.language || 'ar'}
           />
         )}
 
@@ -285,6 +289,7 @@ export default function App() {
               jobs={jobs}
               onMoveJob={handleMoveJob}
               onSelectJob={setSelectedJobDetails}
+              language={config.language || 'ar'}
             />
           </div>
         )}
