@@ -168,18 +168,3 @@
     --theme-secondary-950: #4c0519;
   }
 }
-
-/* Legacy Browser (Safari 9) Fallbacks */
-@supports not (display: grid) {
-  .grid {
-    display: flex !important;
-    display: -webkit-flex !important;
-    flex-wrap: wrap !important;
-    -webkit-flex-wrap: wrap !important;
-  }
-  .grid > * {
-    flex: 1 1 22% !important;
-    -webkit-flex: 1 1 22% !important;
-    min-width: 200px !important;
-  }
-}

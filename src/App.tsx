@@ -8,21 +8,9 @@ import { SettingsTab } from './components/SettingsTab';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
 
-const checkDisplayMode = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  try {
-    const search = window.location.search || '';
-    if (search.indexOf('display=true') !== -1) return true;
-    if (window.URLSearchParams) {
-      return new URLSearchParams(search).get('display') === 'true';
-    }
-  } catch (e) {}
-  return false;
-};
-
 // Safelist for dynamic themes: primary-orange primary-blue primary-green primary-purple primary-rose secondary-orange secondary-blue secondary-green secondary-purple secondary-rose
 export default function App() {
-  const isDisplayMode = checkDisplayMode();
+  const isDisplayMode = new URLSearchParams(window.location.search).get('display') === 'true';
   const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [unacknowledgedJobs, setUnacknowledgedJobs] = useState<PrintJob[]>([]);
   const seenJobIdsRef = useRef<Set<string>>(new Set());
@@ -40,7 +28,6 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Acknowledge new order alerts & stop sound
   const handleAcknowledgeAlert = useCallback(() => {
@@ -54,10 +41,9 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setConfig(data);
-        setFetchError(null);
       }
     } catch (err) {
-      console.error('Fetch config error:', err);
+      console.error(err);
     }
   }, []);
 
@@ -84,13 +70,9 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setJobs(data.jobs || []);
-        setFetchError(null);
-      } else {
-        setFetchError('تعذر جلب قائمة البيانات من الخادم');
       }
     } catch (err) {
-      console.error('Fetch files error:', err);
-      setFetchError('انقطع الاتصال بالخادم الرئيسي - جاري إعادة الاتصال...');
+      console.error(err);
     } finally {
       setIsRefreshing(false);
     }
@@ -268,21 +250,6 @@ export default function App() {
         unacknowledgedJobs={unacknowledgedJobs}
         recentJobs={[...jobs].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 30)}
       />}
-
-      {fetchError && (
-        <div className="bg-amber-600/90 text-amber-50 px-4 py-2 text-xs font-bold flex items-center justify-between border-b border-amber-500/30 z-40 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-200 animate-pulse"></span>
-            <span>{fetchError}</span>
-          </div>
-          <button
-            onClick={() => { fetchConfig(); fetchFiles(); }}
-            className="px-2.5 py-1 bg-amber-800/80 hover:bg-amber-800 text-white rounded text-[11px] font-bold transition-colors"
-          >
-            تحديث الأن
-          </button>
-        </div>
-      )}
 
       {unacknowledgedJobs.length > 0 && (
         <div className={`fixed bottom-6 right-6 ${getBannerColorClass()} text-white px-6 py-4 rounded-xl shadow-2xl z-50 transition-all transform animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center justify-between gap-6 border border-white/10`}>

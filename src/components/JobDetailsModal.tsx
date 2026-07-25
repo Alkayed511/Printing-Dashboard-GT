@@ -75,13 +75,13 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
           <div className="flex items-center gap-3">
             <div 
               className="p-2.5 rounded-xl text-zinc-900 font-bold"
-              style={{ backgroundColor: (printerInfo && printerInfo.accentColor) || '#3b82f6' }}
+              style={{ backgroundColor: printerInfo?.accentColor || '#3b82f6' }}
             >
               <Printer className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg text-zinc-100">{(printerInfo && printerInfo.nameAr) || ''}</h3>
+                <h3 className="font-bold text-lg text-zinc-100">{printerInfo?.nameAr}</h3>
                 <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
                   {job.printer.toUpperCase()}
                 </span>
