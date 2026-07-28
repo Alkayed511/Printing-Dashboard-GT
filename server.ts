@@ -9,18 +9,25 @@ const app = express();
 const PORT = 3000;
 
 function getLocalIp() {
+  if (serverConfig && serverConfig.localIp && serverConfig.localIp.trim()) {
+    return serverConfig.localIp.trim();
+  }
   const interfaces = os.networkInterfaces();
+  let foundIp = '';
   for (const name of Object.keys(interfaces)) {
     const list = interfaces[name];
     if (list) {
       for (const iface of list) {
         if (iface.family === 'IPv4' && !iface.internal) {
-          return iface.address;
+          if (iface.address === '192.168.1.207') {
+            return '192.168.1.207';
+          }
+          if (!foundIp) foundIp = iface.address;
         }
       }
     }
   }
-  return 'localhost';
+  return foundIp || '192.168.1.207';
 }
 
 
@@ -36,6 +43,7 @@ let serverConfig: ServerConfig = {
   notificationSound: 'default',
   notificationColor: 'red',
   notificationDuration: 0,
+  localIp: '192.168.1.207',
 };
 
 const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];
@@ -315,6 +323,7 @@ app.post('/api/config', (req: Request, res: Response) => {
   if (themeColor !== undefined) serverConfig.themeColor = themeColor;
   if (req.body.secondaryColor !== undefined) serverConfig.secondaryColor = req.body.secondaryColor;
   if (req.body.language !== undefined) serverConfig.language = req.body.language;
+  if (req.body.localIp !== undefined) serverConfig.localIp = req.body.localIp;
 
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);

@@ -24,6 +24,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [themeColor, setThemeColor] = useState(config.themeColor || 'orange');
   const [secondaryColor, setSecondaryColor] = useState(config.secondaryColor || 'blue');
   const [language, setLanguage] = useState(config.language || 'ar');
+  const [localIp, setLocalIp] = useState(config.localIp || '192.168.1.207');
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       themeColor,
       secondaryColor,
       language,
+      localIp,
     });
     
     setIsSaved(true);
@@ -236,9 +238,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <Network className="w-4 h-4 text-emerald-400" />
               {t.displayLinkTitle}
             </h4>
-            <div className="flex items-center gap-2">
+            
+            <div className="space-y-1.5 bg-zinc-900/60 p-3 rounded-lg border border-zinc-800">
+              <label className="text-xs font-semibold text-zinc-300 block">
+                {t.ipAddressTitle}
+              </label>
+              <input
+                type="text"
+                value={localIp}
+                onChange={(e) => setLocalIp(e.target.value)}
+                placeholder="192.168.1.207"
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-emerald-300 font-mono focus:outline-none focus:border-emerald-500 dir-ltr text-left"
+              />
+              <p className="text-[11px] text-zinc-400">{t.ipAddressHelp}</p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
               <code className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-emerald-400 font-mono text-sm dir-ltr text-center">
-                http://{config.localIp || 'localhost'}:3000/?display=true
+                http://{localIp.trim() || '192.168.1.207'}:3000/?display=true
               </code>
             </div>
             <p className="text-xs text-zinc-500">{t.displayLinkHelp}</p>
