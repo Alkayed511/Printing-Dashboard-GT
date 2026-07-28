@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HardDrive, RefreshCw, Calendar, CheckCircle2, Network, HelpCircle, Save, Settings, Bell, Palette, Clock } from 'lucide-react';
+import { HardDrive, RefreshCw, Calendar, CheckCircle2, Network, HelpCircle, Save, Settings, Bell, Palette, Clock, Copy, ExternalLink, Globe, Check } from 'lucide-react';
 import { ServerConfig } from '../types';
 import { translations } from '../translations';
 
@@ -26,6 +26,22 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [language, setLanguage] = useState(config.language || 'ar');
   const [localIp, setLocalIp] = useState(config.localIp || '192.168.1.207');
   const [isSaved, setIsSaved] = useState(false);
+  const [copiedOnline, setCopiedOnline] = useState(false);
+  const [copiedLan, setCopiedLan] = useState(false);
+
+  const onlineDisplayUrl = window.location.origin + window.location.pathname + '?display=true';
+  const lanDisplayUrl = `http://${localIp.trim() || '192.168.1.207'}:3000/?display=true`;
+
+  const copyToClipboard = (text: string, type: 'online' | 'lan') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'online') {
+      setCopiedOnline(true);
+      setTimeout(() => setCopiedOnline(false), 2000);
+    } else {
+      setCopiedLan(true);
+      setTimeout(() => setCopiedLan(false), 2000);
+    }
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -232,33 +248,131 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
           <hr className="border-zinc-800" />
 
-          {/* Network Display Link */}
-          <div className="p-5 bg-zinc-950 border border-zinc-800 rounded-xl space-y-3">
-            <h4 className="text-sm font-bold text-zinc-300 flex items-center gap-2">
-              <Network className="w-4 h-4 text-emerald-400" />
-              {t.displayLinkTitle}
-            </h4>
-            
-            <div className="space-y-1.5 bg-zinc-900/60 p-3 rounded-lg border border-zinc-800">
-              <label className="text-xs font-semibold text-zinc-300 block">
-                {t.ipAddressTitle}
-              </label>
-              <input
-                type="text"
-                value={localIp}
-                onChange={(e) => setLocalIp(e.target.value)}
-                placeholder="192.168.1.207"
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-emerald-300 font-mono focus:outline-none focus:border-emerald-500 dir-ltr text-left"
-              />
-              <p className="text-[11px] text-zinc-400">{t.ipAddressHelp}</p>
+          {/* Network & Online Display Links */}
+          <div className="p-5 bg-zinc-950 border border-zinc-800 rounded-xl space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h4 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                <Network className="w-4 h-4 text-emerald-400" />
+                {t.displayLinkTitle}
+              </h4>
+              <span className="text-xs text-zinc-400">{t.displayLinkHelp}</span>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <code className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-emerald-400 font-mono text-sm dir-ltr text-center">
-                http://{localIp.trim() || '192.168.1.207'}:3000/?display=true
-              </code>
+            {/* Online / WAN Cloud Display Link (Global Internet) */}
+            <div className="bg-zinc-900/90 p-4 rounded-xl border border-emerald-500/50 space-y-3 shadow-lg shadow-emerald-950/20">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  {t.wanTitle}
+                </span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold">
+                  WAN / INTERNET READY
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <code className="flex-1 bg-zinc-950 border border-emerald-800/60 rounded-lg p-2.5 text-emerald-300 font-mono text-xs dir-ltr text-left truncate w-full sm:w-auto">
+                  {onlineDisplayUrl}
+                </code>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => window.open(onlineDisplayUrl, '_blank')}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 shadow-sm"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>{t.openDisplayBtn}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(onlineDisplayUrl, 'online')}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 border border-zinc-700 transition-colors shrink-0"
+                  >
+                    {copiedOnline ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedOnline ? t.copied : t.copyLinkBtn}</span>
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs text-emerald-200/80 leading-relaxed">
+                {t.wanHelp}
+              </p>
+
+              {/* QR Code for WAN Display Link */}
+              <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center gap-4 flex-wrap sm:flex-nowrap bg-zinc-950/60 p-3 rounded-lg border border-zinc-800/80">
+                <div className="bg-white p-1.5 rounded-lg shrink-0 border border-zinc-300 shadow-md">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(onlineDisplayUrl)}`}
+                    alt="WAN Display QR Code"
+                    className="w-20 h-20"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <h5 className="text-xs font-bold text-zinc-200">{t.qrCodeTitle}</h5>
+                  <p className="text-[11px] text-zinc-400 leading-normal">
+                    امسح هذا الرمز باستخدام كاميرا الهاتـف أو الشاشة الذكية لفتح شاشة العرض مباشرة عبر الإنترنت (WAN).
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-zinc-500">{t.displayLinkHelp}</p>
+
+            {/* Local LAN Server IP Link */}
+            <div className="bg-zinc-900/60 p-3.5 rounded-xl border border-zinc-800 space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-300 block">
+                  {t.ipAddressTitle}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={localIp}
+                    onChange={(e) => setLocalIp(e.target.value)}
+                    placeholder="192.168.1.207"
+                    className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-emerald-300 font-mono focus:outline-none focus:border-emerald-500 dir-ltr text-left"
+                  />
+                </div>
+                <p className="text-[11px] text-zinc-400">{t.ipAddressHelp}</p>
+              </div>
+
+              <div className="space-y-1.5 pt-1">
+                <span className="text-xs font-semibold text-zinc-300 block">
+                  {t.lanDisplayLinkTitle}
+                </span>
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <code className="flex-1 bg-zinc-950 border border-zinc-700/80 rounded-lg p-2.5 text-amber-300/90 font-mono text-xs dir-ltr text-left truncate w-full sm:w-auto">
+                    {lanDisplayUrl}
+                  </code>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => window.open(lanDisplayUrl, '_blank')}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 border border-zinc-700 transition-colors shrink-0"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>{t.openDisplayBtn}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(lanDisplayUrl, 'lan')}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 border border-zinc-700 transition-colors shrink-0"
+                    >
+                      {copiedLan ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedLan ? t.copied : t.copyLinkBtn}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-950/30 border border-amber-800/40 p-3 rounded-lg text-xs text-amber-200/90 leading-relaxed space-y-1">
+                <p className="font-bold">⚠️ توضيح هـام بخصوص شبكات WAN و LAN:</p>
+                <p>
+                  عنوان IP المحلي <code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">192.168.1.207</code> يعمل <strong>فقط داخل الورشة على نفس شبكة الواي فاي المحلية (LAN)</strong> ولا يمكن تحويله مباشرة لـ WAN بدون توجيه منافذ الراوتر (Port Forwarding Port 3000).
+                </p>
+                <p>
+                  لشتغيل الشاشة عبر شبكة الإنترنت (WAN) على أي شاشة أو هاتف خارجي: <strong>استخدم رابط WAN الأخضر المباشر أعلاه</strong> أو امسح كود QR بكل سهولة!
+                </p>
+              </div>
+            </div>
           </div>
           
           <hr className="border-zinc-800" />
