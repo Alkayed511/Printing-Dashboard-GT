@@ -19,15 +19,12 @@ function getLocalIp() {
     if (list) {
       for (const iface of list) {
         if (iface.family === 'IPv4' && !iface.internal) {
-          if (iface.address === '192.168.1.207') {
-            return '192.168.1.207';
-          }
           if (!foundIp) foundIp = iface.address;
         }
       }
     }
   }
-  return foundIp || '192.168.1.207';
+  return foundIp || 'localhost';
 }
 
 
@@ -43,7 +40,7 @@ let serverConfig: ServerConfig = {
   notificationSound: 'default',
   notificationColor: 'red',
   notificationDuration: 0,
-  localIp: '192.168.1.207',
+  localIp: '',
 };
 
 const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];

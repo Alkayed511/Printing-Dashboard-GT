@@ -24,13 +24,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [themeColor, setThemeColor] = useState(config.themeColor || 'orange');
   const [secondaryColor, setSecondaryColor] = useState(config.secondaryColor || 'blue');
   const [language, setLanguage] = useState(config.language || 'ar');
-  const [localIp, setLocalIp] = useState(config.localIp || '192.168.1.207');
+  const [localIp, setLocalIp] = useState(config.localIp || '');
   const [isSaved, setIsSaved] = useState(false);
   const [copiedOnline, setCopiedOnline] = useState(false);
   const [copiedLan, setCopiedLan] = useState(false);
 
+  const activeLocalIp = localIp.trim() || config.localIp || 'localhost';
   const onlineDisplayUrl = window.location.origin + window.location.pathname + '?display=true';
-  const lanDisplayUrl = `http://${localIp.trim() || '192.168.1.207'}:3000/?display=true`;
+  const lanDisplayUrl = `http://${activeLocalIp}:3000/?display=true`;
 
   const copyToClipboard = (text: string, type: 'online' | 'lan') => {
     navigator.clipboard.writeText(text);
@@ -327,7 +328,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     type="text"
                     value={localIp}
                     onChange={(e) => setLocalIp(e.target.value)}
-                    placeholder="192.168.1.207"
+                    placeholder={language === 'ar' ? 'تلقائي (Automatic)' : 'Automatic'}
                     className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-emerald-300 font-mono focus:outline-none focus:border-emerald-500 dir-ltr text-left"
                   />
                 </div>
@@ -366,7 +367,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <div className="bg-amber-950/30 border border-amber-800/40 p-3 rounded-lg text-xs text-amber-200/90 leading-relaxed space-y-1">
                 <p className="font-bold">⚠️ توضيح هـام بخصوص شبكات WAN و LAN:</p>
                 <p>
-                  عنوان IP المحلي <code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">192.168.1.207</code> يعمل <strong>فقط داخل الورشة على نفس شبكة الواي فاي المحلية (LAN)</strong> ولا يمكن تحويله مباشرة لـ WAN بدون توجيه منافذ الراوتر (Port Forwarding Port 3000).
+                  عنوان IP المحلي <code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">{activeLocalIp}</code> يكتشف عنوان جهاز السيرفر تلقائياً في الشبكة المحلية (LAN)، ويمكنك تغييره بحرية في أي وقت.
                 </p>
                 <p>
                   لشتغيل الشاشة عبر شبكة الإنترنت (WAN) على أي شاشة أو هاتف خارجي: <strong>استخدم رابط WAN الأخضر المباشر أعلاه</strong> أو امسح كود QR بكل سهولة!
