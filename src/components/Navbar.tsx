@@ -27,7 +27,8 @@ import {
   Eye,
   SlidersHorizontal,
   Smartphone,
-  ShieldAlert
+  ShieldAlert,
+  Upload
 } from 'lucide-react';
 import { ServerConfig, PrintJob } from '../types';
 import { translations } from '../translations';
@@ -574,7 +575,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         {/* Test Sound Button */}
                         <button
                           type="button"
-                          onClick={() => playNotificationSound(config.notificationSound || 'default')}
+                          onClick={() => playNotificationSound(config.notificationSound || 'default', config.customSoundUrl)}
                           className="flex items-center gap-1 text-[10px] font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-500/30 transition-all active:scale-95"
                         >
                           <Play className="w-3 h-3 fill-emerald-300" />
@@ -587,6 +588,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         {[
                           { id: 'default', label: t.soundDefault, icon: '🛎️' },
                           { id: 'shorts', label: t.soundShorts, icon: '🔥' },
+                          { id: 'faaaaaa', label: t.soundFaaaaaa, icon: '📢' },
+                          { id: 'custom', label: t.soundCustom, icon: '📁' },
                           { id: 'alt1', label: t.soundFast, icon: '⚡' },
                           { id: 'alt2', label: t.soundSlow, icon: '🎵' },
                           { id: 'off', label: t.soundOff, icon: '🔇' },
@@ -598,7 +601,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               type="button"
                               onClick={() => {
                                 if (onUpdateConfig) onUpdateConfig({ notificationSound: snd.id });
-                                playNotificationSound(snd.id);
+                                playNotificationSound(snd.id, config.customSoundUrl);
                               }}
                               className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                 isActive
@@ -606,14 +609,44 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800'
                               }`}
                             >
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1 truncate">
                                 <span>{snd.icon}</span>
-                                <span>{snd.label}</span>
+                                <span className="truncate">{snd.label}</span>
                               </span>
-                              {isActive && <Check className="w-3.5 h-3.5" />}
+                              {isActive && <Check className="w-3.5 h-3.5 shrink-0" />}
                             </button>
                           );
                         })}
+                      </div>
+
+                      {/* Quick Upload Button in Navbar */}
+                      <div className="pt-1">
+                        <label className="cursor-pointer flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-dashed border-zinc-700 hover:border-emerald-500 rounded-lg px-2 py-1.5 text-[11px] font-medium text-zinc-300 transition-all">
+                          <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{config.customSoundUrl ? 'تغيير الملف الصوتي الخاص' : t.uploadCustomAudio}</span>
+                          <input
+                            type="file"
+                            accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  const result = event.target?.result as string;
+                                  if (result && onUpdateConfig) {
+                                    onUpdateConfig({ 
+                                      customSoundUrl: result,
+                                      notificationSound: 'custom'
+                                    });
+                                    playNotificationSound('custom', result);
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     </div>
 

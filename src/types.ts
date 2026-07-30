@@ -36,6 +36,7 @@ export interface ServerConfig {
   isRealStorageAvailable: boolean;
   activePath: string;
   notificationSound?: string;
+  customSoundUrl?: string;
   notificationColor?: string;
   notificationDuration?: number;
   disableMouseInDisplayMode?: boolean;

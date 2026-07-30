@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { HardDrive, RefreshCw, Calendar, CheckCircle2, Network, HelpCircle, Save, Settings, Bell, Palette, Clock, Copy, ExternalLink, Globe, Check } from 'lucide-react';
+import { HardDrive, RefreshCw, Calendar, CheckCircle2, Network, HelpCircle, Save, Settings, Bell, Palette, Clock, Copy, ExternalLink, Globe, Check, Upload, Play, Volume2 } from 'lucide-react';
 import { ServerConfig } from '../types';
 import { translations } from '../translations';
+import { playNotificationSound } from '../utils/audio';
 
 const samplePrinters = ['eco', 'solvint', 'r2r'];
 
@@ -18,6 +19,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [currentDate, setCurrentDate] = useState(config.currentDate);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(config.autoRefreshInterval);
   const [notificationSound, setNotificationSound] = useState(config.notificationSound || 'default');
+  const [customSoundUrl, setCustomSoundUrl] = useState(config.customSoundUrl || '');
   const [notificationColor, setNotificationColor] = useState(config.notificationColor || 'red');
   const [notificationDuration, setNotificationDuration] = useState(config.notificationDuration || 0);
   const [disableMouseInDisplayMode, setDisableMouseInDisplayMode] = useState(config.disableMouseInDisplayMode || false);
@@ -60,6 +62,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       currentDate,
       autoRefreshInterval,
       notificationSound,
+      customSoundUrl,
       notificationColor,
       notificationDuration,
       disableMouseInDisplayMode,
@@ -191,11 +194,22 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Sound */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-zinc-400" />
-                  {t.soundTitle}
-                </label>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-zinc-400" />
+                    {t.soundTitle}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => playNotificationSound(notificationSound, customSoundUrl)}
+                    className="flex items-center gap-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-1 rounded-lg border border-emerald-500/30 transition-all active:scale-95"
+                  >
+                    <Play className="w-3 h-3 fill-emerald-400" />
+                    <span>تجربة الصوت</span>
+                  </button>
+                </div>
+
                 <select
                   value={notificationSound}
                   onChange={(e) => setNotificationSound(e.target.value)}
@@ -203,10 +217,48 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 >
                   <option value="default">{t.soundDefault}</option>
                   <option value="shorts">{t.soundShorts}</option>
+                  <option value="faaaaaa">{t.soundFaaaaaa}</option>
+                  <option value="custom">{t.soundCustom}</option>
                   <option value="alt1">{t.soundFast}</option>
                   <option value="alt2">{t.soundSlow}</option>
                   <option value="off">{t.soundOff}</option>
                 </select>
+
+                {/* File Upload Input for Custom Audio */}
+                {(notificationSound === 'custom' || customSoundUrl) && (
+                  <div className="pt-1">
+                    <label className="cursor-pointer flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-dashed border-zinc-700 hover:border-emerald-500 rounded-xl px-3 py-2 text-xs font-medium text-zinc-300 transition-all">
+                      <Upload className="w-4 h-4 text-emerald-400" />
+                      <span>{customSoundUrl ? 'تغيير الملف الصوتي (MP3/WAV)' : t.uploadCustomAudio}</span>
+                      <input
+                        type="file"
+                        accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const result = event.target?.result as string;
+                              if (result) {
+                                setCustomSoundUrl(result);
+                                setNotificationSound('custom');
+                                playNotificationSound('custom', result);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                    {customSoundUrl && (
+                      <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        <span>{t.customAudioUploaded}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Color */}

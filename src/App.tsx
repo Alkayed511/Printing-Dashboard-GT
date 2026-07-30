@@ -185,7 +185,7 @@ export default function App() {
       }
 
       // Play notification chime
-      playNotificationSound(config.notificationSound || 'default');
+      playNotificationSound(config.notificationSound || 'default', config.customSoundUrl);
     }
   }, [jobs, config.notificationSound]);
 
