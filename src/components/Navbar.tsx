@@ -586,15 +586,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {/* Sound Choice Buttons */}
                       <div className="grid grid-cols-2 gap-1.5 pt-1">
                         {[
-                          { id: 'default', label: t.soundDefault, icon: '🛎️' },
-                          { id: 'shorts', label: t.soundShorts, icon: '🔥' },
                           { id: 'faaaaaa', label: t.soundFaaaaaa, icon: '📢' },
                           { id: 'custom', label: t.soundCustom, icon: '📁' },
+                          { id: 'default', label: t.soundDefault, icon: '🛎️' },
+                          { id: 'shorts', label: t.soundShorts, icon: '🔥' },
                           { id: 'alt1', label: t.soundFast, icon: '⚡' },
                           { id: 'alt2', label: t.soundSlow, icon: '🎵' },
                           { id: 'off', label: t.soundOff, icon: '🔇' },
                         ].map((snd) => {
-                          const isActive = (config.notificationSound || 'default') === snd.id;
+                          const isActive = (config.notificationSound || 'faaaaaa') === snd.id;
                           return (
                             <button
                               key={snd.id}
@@ -619,26 +619,43 @@ export const Navbar: React.FC<NavbarProps> = ({
                         })}
                       </div>
 
-                      {/* Quick Upload Button in Navbar */}
-                      <div className="pt-1">
-                        <label className="cursor-pointer flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-dashed border-zinc-700 hover:border-emerald-500 rounded-lg px-2 py-1.5 text-[11px] font-medium text-zinc-300 transition-all">
-                          <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>{config.customSoundUrl ? 'تغيير الملف الصوتي الخاص' : t.uploadCustomAudio}</span>
+                      {/* Quick File Upload Input in Navbar */}
+                      <div className="pt-1.5">
+                        <label className="cursor-pointer flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-dashed border-zinc-700 hover:border-emerald-500 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 transition-all text-center">
+                          <Upload className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span className="truncate">{config.customSoundUrl ? 'تغيير الملف الصوتي الأصلي' : 'رفع ملفك الصوتي الاصلي (MP3/WAV)'}</span>
                           <input
                             type="file"
                             accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
                             className="hidden"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
                                 const reader = new FileReader();
-                                reader.onload = (event) => {
+                                reader.onload = async (event) => {
                                   const result = event.target?.result as string;
-                                  if (result && onUpdateConfig) {
-                                    onUpdateConfig({ 
-                                      customSoundUrl: result,
-                                      notificationSound: 'custom'
-                                    });
+                                  if (result) {
+                                    if (typeof localStorage !== 'undefined') {
+                                      localStorage.setItem('customSoundUrl', result);
+                                    }
+                                    try {
+                                      const resp = await fetch('/api/upload-sound', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ audioData: result })
+                                      });
+                                      const data = await resp.json();
+                                      if (data.customSoundUrl && onUpdateConfig) {
+                                        onUpdateConfig({ customSoundUrl: data.customSoundUrl, notificationSound: 'custom' });
+                                        playNotificationSound('custom', data.customSoundUrl);
+                                        return;
+                                      }
+                                    } catch (err) {
+                                      console.warn('Server upload failed:', err);
+                                    }
+                                    if (onUpdateConfig) {
+                                      onUpdateConfig({ customSoundUrl: result, notificationSound: 'custom' });
+                                    }
                                     playNotificationSound('custom', result);
                                   }
                                 };

@@ -302,6 +302,39 @@ function checkDiskStorage(baseP: string, dateStr: string) {
   return false;
 }
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
+
+// POST /api/upload-sound - Upload custom notification sound
+app.post('/api/upload-sound', (req: Request, res: Response) => {
+  try {
+    const { audioData } = req.body;
+    if (!audioData) {
+      return res.status(400).json({ error: 'No audio data provided' });
+    }
+
+    // Extract base64 content
+    const base64Data = audioData.replace(/^data:audio\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    const filePath = path.join(uploadsDir, 'custom-sound.mp3');
+    fs.writeFileSync(filePath, buffer);
+
+    const soundUrl = `/uploads/custom-sound.mp3?t=${Date.now()}`;
+    serverConfig.customSoundUrl = soundUrl;
+    serverConfig.notificationSound = 'custom';
+
+    res.json({ success: true, customSoundUrl: soundUrl });
+  } catch (err) {
+    console.error('Failed to save sound file:', err);
+    res.status(500).json({ error: 'Failed to save sound file' });
+  }
+});
+
 // API Routes
 app.get('/api/config', (req: Request, res: Response) => {
   const isAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);

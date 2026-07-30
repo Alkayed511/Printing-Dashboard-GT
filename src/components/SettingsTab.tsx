@@ -212,53 +212,87 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
                 <select
                   value={notificationSound}
-                  onChange={(e) => setNotificationSound(e.target.value)}
+                  onChange={(e) => {
+                    const sound = e.target.value;
+                    setNotificationSound(sound);
+                    playNotificationSound(sound, customSoundUrl);
+                  }}
                   className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-secondary-500"
                 >
+                  <option value="faaaaaa">{t.soundFaaaaaa}</option>
+                  <option value="custom">📁 ملف صوتي مخصص (Uploaded Audio File)</option>
                   <option value="default">{t.soundDefault}</option>
                   <option value="shorts">{t.soundShorts}</option>
-                  <option value="faaaaaa">{t.soundFaaaaaa}</option>
-                  <option value="custom">{t.soundCustom}</option>
                   <option value="alt1">{t.soundFast}</option>
                   <option value="alt2">{t.soundSlow}</option>
                   <option value="off">{t.soundOff}</option>
                 </select>
 
-                {/* File Upload Input for Custom Audio */}
-                {(notificationSound === 'custom' || customSoundUrl) && (
-                  <div className="pt-1">
-                    <label className="cursor-pointer flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-dashed border-zinc-700 hover:border-emerald-500 rounded-xl px-3 py-2 text-xs font-medium text-zinc-300 transition-all">
-                      <Upload className="w-4 h-4 text-emerald-400" />
-                      <span>{customSoundUrl ? 'تغيير الملف الصوتي (MP3/WAV)' : t.uploadCustomAudio}</span>
-                      <input
-                        type="file"
-                        accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const result = event.target?.result as string;
-                              if (result) {
-                                setCustomSoundUrl(result);
-                                setNotificationSound('custom');
-                                playNotificationSound('custom', result);
+                {/* Upload Exact Audio File Box */}
+                <div className="pt-1">
+                  <label className="cursor-pointer flex flex-col items-center justify-center gap-1.5 bg-zinc-950 hover:bg-zinc-900 border-2 border-dashed border-zinc-700 hover:border-emerald-500 rounded-xl p-3 text-xs text-zinc-300 transition-all text-center">
+                    <div className="flex items-center gap-2 font-bold text-emerald-400">
+                      <Upload className="w-4 h-4" />
+                      <span>{customSoundUrl ? 'تغيير ملف الصوت الأصلي (MP3/WAV)' : 'رفع ملف الصوت الأصلي بدون تعديل'}</span>
+                    </div>
+                    <span className="text-[11px] text-zinc-500">ارفع ملفك الصوتي وسيعمل كما هو بالظبط بدون أي تغيير</span>
+                    <input
+                      type="file"
+                      accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = async (event) => {
+                            const result = event.target?.result as string;
+                            if (result) {
+                              setCustomSoundUrl(result);
+                              setNotificationSound('custom');
+                              if (typeof localStorage !== 'undefined') {
+                                localStorage.setItem('customSoundUrl', result);
                               }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </label>
-                    {customSoundUrl && (
-                      <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        <span>{t.customAudioUploaded}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
+                              // Try posting to backend server
+                              try {
+                                const resp = await fetch('/api/upload-sound', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ audioData: result })
+                                });
+                                const data = await resp.json();
+                                if (data.customSoundUrl) {
+                                  setCustomSoundUrl(data.customSoundUrl);
+                                  playNotificationSound('custom', data.customSoundUrl);
+                                  return;
+                                }
+                              } catch (err) {
+                                console.warn('Server upload failed, using local base64 sound:', err);
+                              }
+                              playNotificationSound('custom', result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {customSoundUrl && (
+                    <div className="mt-2 flex items-center justify-between bg-emerald-950/40 border border-emerald-800/60 rounded-lg px-2.5 py-1.5 text-xs text-emerald-300">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="truncate">تم حفظ الصوت الأصلي بنجاح</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => playNotificationSound('custom', customSoundUrl)}
+                        className="flex items-center gap-1 font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded text-[10px]"
+                      >
+                        <Play className="w-2.5 h-2.5 fill-emerald-300" />
+                        <span>تشغيل</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Color */}
