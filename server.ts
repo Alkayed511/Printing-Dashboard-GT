@@ -28,7 +28,8 @@ function getLocalIp() {
 }
 
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Default configuration
 let serverConfig: ServerConfig = {
@@ -38,6 +39,7 @@ let serverConfig: ServerConfig = {
   isRealStorageAvailable: false,
   activePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`,
   notificationSound: 'default',
+  customSoundUrl: '',
   notificationColor: 'red',
   notificationDuration: 0,
   localIp: '',
@@ -319,6 +321,7 @@ app.post('/api/config', (req: Request, res: Response) => {
   if (disableMouseInDisplayMode !== undefined) serverConfig.disableMouseInDisplayMode = Boolean(disableMouseInDisplayMode);
   if (themeColor !== undefined) serverConfig.themeColor = themeColor;
   if (req.body.secondaryColor !== undefined) serverConfig.secondaryColor = req.body.secondaryColor;
+  if (req.body.customSoundUrl !== undefined) serverConfig.customSoundUrl = req.body.customSoundUrl;
   if (req.body.language !== undefined) serverConfig.language = req.body.language;
   if (req.body.localIp !== undefined) serverConfig.localIp = req.body.localIp;
 
