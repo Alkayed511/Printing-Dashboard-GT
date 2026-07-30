@@ -586,15 +586,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {/* Sound Choice Buttons */}
                       <div className="grid grid-cols-2 gap-1.5 pt-1">
                         {[
-                          { id: 'faaaaaa', label: t.soundFaaaaaa, icon: '📢' },
-                          { id: 'custom', label: t.soundCustom, icon: '📁' },
                           { id: 'default', label: t.soundDefault, icon: '🛎️' },
                           { id: 'shorts', label: t.soundShorts, icon: '🔥' },
+                          { id: 'faaaaaa', label: t.soundFaaaaaa, icon: '📢' },
+                          { id: 'custom', label: t.soundCustom, icon: '📁' },
                           { id: 'alt1', label: t.soundFast, icon: '⚡' },
                           { id: 'alt2', label: t.soundSlow, icon: '🎵' },
                           { id: 'off', label: t.soundOff, icon: '🔇' },
                         ].map((snd) => {
-                          const isActive = (config.notificationSound || 'faaaaaa') === snd.id;
+                          const isActive = (config.notificationSound || 'default') === snd.id;
                           return (
                             <button
                               key={snd.id}
