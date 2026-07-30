@@ -206,9 +206,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="bg-zinc-900 border-b border-zinc-800 text-white sticky top-0 z-30 shadow-md shrink-0">
+    <header className="bg-zinc-900 border-b border-zinc-800 text-white sticky top-0 z-40 shadow-md shrink-0">
       {/* Ultra Compact & Balanced Main Navigation Bar */}
-      <div className="max-w-[1800px] mx-auto w-full px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+      <div className="max-w-[1800px] mx-auto w-full px-3 py-1.5 flex items-center justify-between gap-2 overflow-visible">
         
         {/* Start Section: Brand & Title */}
         <div className="flex items-center gap-2 shrink-0">
@@ -351,7 +351,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Notification Dropdown Panel */}
             {isNotificationsOpen && (
-              <div className="absolute top-full left-0 sm:left-0 sm:right-auto mt-2 w-80 sm:w-96 bg-zinc-900/95 backdrop-blur-md border border-zinc-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] ltr:right-0 ltr:left-auto rtl:left-0 rtl:right-auto bg-zinc-900/95 backdrop-blur-md border border-zinc-700/80 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                 
                 {/* Panel Header */}
                 <div className="p-3 bg-zinc-950/80 border-b border-zinc-800 flex items-center justify-between">
