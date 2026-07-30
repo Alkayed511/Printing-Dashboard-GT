@@ -202,6 +202,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-secondary-500"
                 >
                   <option value="default">{t.soundDefault}</option>
+                  <option value="shorts">{t.soundShorts}</option>
                   <option value="alt1">{t.soundFast}</option>
                   <option value="alt2">{t.soundSlow}</option>
                   <option value="off">{t.soundOff}</option>

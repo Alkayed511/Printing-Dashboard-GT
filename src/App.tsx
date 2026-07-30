@@ -8,6 +8,7 @@ import { StatsOverview } from './components/StatsOverview';
 import { SettingsTab } from './components/SettingsTab';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
+import { playNotificationSound } from './utils/audio';
 
 // Safelist for dynamic themes: primary-orange primary-blue primary-green primary-purple primary-rose secondary-orange secondary-blue secondary-green secondary-purple secondary-rose
 export default function App() {
@@ -167,50 +168,24 @@ export default function App() {
       });
 
 
-      // Play sound using Web Audio API if not 'off'
-      if (config.notificationSound !== 'off') {
+      // Trigger desktop browser push notification if permitted
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
         try {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContextClass) {
-            const ctx = new AudioContextClass();
-            
-            const playNote = (frequency: number, startTime: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.2) => {
-              const osc = ctx.createOscillator();
-              const gain = ctx.createGain();
-              osc.type = type;
-              osc.frequency.setValueAtTime(frequency, startTime);
-              
-              gain.gain.setValueAtTime(0, startTime);
-              gain.gain.linearRampToValueAtTime(volume, startTime + duration * 0.1);
-              gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-              
-              osc.connect(gain);
-              gain.connect(ctx.destination);
-              
-              osc.start(startTime);
-              osc.stop(startTime + duration);
-            };
-
-            const now = ctx.currentTime;
-            if (config.notificationSound === 'alt1') {
-              // Quick alert
-              playNote(523.25, now, 0.15, 'square', 0.1); // C5
-              playNote(659.25, now + 0.15, 0.2, 'square', 0.1); // E5
-            } else if (config.notificationSound === 'alt2') {
-              // Gentle chime
-              playNote(440, now, 0.4, 'sine', 0.15); // A4
-              playNote(554.37, now + 0.2, 0.4, 'sine', 0.15); // C#5
-            } else {
-              // Default (Positive Ding)
-              playNote(523.25, now, 0.2, 'sine', 0.2); // C5
-              playNote(783.99, now + 0.15, 0.4, 'sine', 0.2); // G5
-            }
-          }
+          const firstJob = newJobs[0];
+          const title = newJobs.length === 1 
+            ? `طلب طباعة جديد: ${firstJob.filename}`
+            : `وصلت ${newJobs.length} طلبات طباعة جديدة!`;
+          new Notification(title, {
+            body: `الطابعة: ${firstJob.printer.toUpperCase()} - اضغط للفتح`,
+            tag: 'print-job-alert'
+          });
         } catch (e) {
-          console.error('Audio play error:', e);
+          console.error('Desktop notification error:', e);
         }
       }
 
+      // Play notification chime
+      playNotificationSound(config.notificationSound || 'default');
     }
   }, [jobs, config.notificationSound]);
 
@@ -223,8 +198,6 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [unacknowledgedJobs, config.notificationDuration, handleAcknowledgeAlert]);
-
-
 
   const getBannerColorClass = () => {
     switch (config.notificationColor) {
@@ -250,8 +223,15 @@ export default function App() {
         isRefreshing={isRefreshing}
         totalJobsCount={jobs.length}
         pendingJobsCount={jobs.filter(j => j.status === 'pending').length}
+        allJobs={jobs}
         unacknowledgedJobs={unacknowledgedJobs}
-        recentJobs={[...jobs].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 30)}
+        onDismissNotification={(id) => {
+          setUnacknowledgedJobs(prev => prev.filter(j => j.id !== id));
+        }}
+        onDismissAllNotifications={handleAcknowledgeAlert}
+        onAcknowledgeAlert={handleAcknowledgeAlert}
+        onSelectJob={(job) => setSelectedJobDetails(job)}
+        onUpdateConfig={(updates) => handleSaveConfig({ ...config, ...updates })}
       />}
 
       {unacknowledgedJobs.length > 0 && (
