@@ -1,13 +1,13 @@
 import React from 'react';
-import { PrintJob, PrinterType } from '../types';
-import { PRINTERS_LIST } from '../data/printers';
+import { PrintJob, ServerConfig } from '../types';
 import { BarChart3, CheckCircle2, Clock, Printer, TrendingUp, Award, Activity } from 'lucide-react';
 
 interface StatsOverviewProps {
   jobs: PrintJob[];
+  config: ServerConfig;
 }
 
-export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
+export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs, config }) => {
   const totalJobs = jobs.length;
   const pendingJobs = jobs.filter((j) => j.status === 'pending').length;
   const doneJobs = jobs.filter((j) => j.status === 'done').length;
@@ -87,7 +87,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
         </div>
 
         <div className="space-y-4">
-          {PRINTERS_LIST.map((printer) => {
+          {(config.printers || []).map((printer) => {
             const pJobs = jobs.filter((j) => j.printer === printer.id);
             const pPending = pJobs.filter((j) => j.status === 'pending').length;
             const pDone = pJobs.filter((j) => j.status === 'done').length;
@@ -99,10 +99,9 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs }) => {
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <div className="flex items-center gap-2">
                     <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: printer.accentColor }}
+                      className="w-3 h-3 rounded-full bg-primary-500"
                     />
-                    <strong className="text-zinc-200">{printer.nameAr}</strong>
+                    <strong className="text-zinc-200">{printer.name}</strong>
                     <span className="text-xs font-mono text-zinc-500">({printer.id.toUpperCase()})</span>
                   </div>
 

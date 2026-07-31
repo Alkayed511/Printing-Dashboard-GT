@@ -1,6 +1,5 @@
 import React from 'react';
-import { PrintJob, PrinterType, FileStatus } from '../types';
-import { PRINTERS_LIST } from '../data/printers';
+import { PrintJob, FileStatus, ServerConfig } from '../types';
 import { Printer, CheckCircle2, Clock, ArrowLeft, ArrowRight, Layers } from 'lucide-react';
 import { translations } from '../translations';
 
@@ -9,6 +8,8 @@ interface CompactGridProps {
   onMoveJob: (id: string, targetStatus: FileStatus) => void;
   onSelectJob: (job: PrintJob) => void;
   language?: 'ar' | 'en';
+  myDepartment?: string | null;
+  config: ServerConfig;
 }
 
 export const CompactGrid: React.FC<CompactGridProps> = ({
@@ -16,12 +17,18 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
   onMoveJob,
   onSelectJob,
   language = 'ar',
+  myDepartment,
+  config,
 }) => {
   const t = translations[language];
+  const visiblePrinters = myDepartment && myDepartment !== 'all' 
+    ? (config.printers || []).filter(p => p.departmentId === myDepartment) 
+    : (config.printers || []);
+
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {PRINTERS_LIST.map((printer) => {
+      {visiblePrinters.map((printer) => {
         const printerJobs = jobs.filter((j) => j.printer === printer.id);
         const pending = printerJobs.filter((j) => j.status === 'pending');
         const done = printerJobs.filter((j) => j.status === 'done');
@@ -35,13 +42,12 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <div className="flex items-center gap-2.5">
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-900 font-bold"
-                  style={{ backgroundColor: printer.accentColor }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-900 font-bold bg-primary-500"
                 >
                   <Printer className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-zinc-100">{language === 'ar' ? printer.nameAr : printer.nameEn}</h3>
+                  <h3 className="font-bold text-sm text-zinc-100">{printer.name}</h3>
                   <span className="text-[10px] text-zinc-400 font-mono">{printer.id.toUpperCase()}</span>
                 </div>
               </div>

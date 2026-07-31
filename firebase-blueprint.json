@@ -1,0 +1,44 @@
+{
+  "collections": [
+    {
+      "name": "settings",
+      "description": "Global application settings including departments and printers",
+      "documents": [
+        {
+          "id": "global",
+          "fields": {
+            "departments": {
+              "type": "array",
+              "description": "List of departments"
+            },
+            "printers": {
+              "type": "array",
+              "description": "List of printers"
+            },
+            "language": {
+              "type": "string"
+            },
+            "primaryColor": {
+              "type": "string"
+            },
+            "secondaryColor": {
+              "type": "string"
+            },
+            "notificationColor": {
+              "type": "string"
+            },
+            "notificationDuration": {
+              "type": "number"
+            },
+            "localIp": {
+              "type": "string"
+            },
+            "customSoundUrl": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -15,8 +15,7 @@ import {
   ChevronLeft,
   Sparkles
 } from 'lucide-react';
-import { PrintJob, PrinterType, FileStatus, PrinterInfo } from '../types';
-import { PRINTERS_LIST } from '../data/printers';
+import { PrintJob, FileStatus, ServerConfig } from '../types';
 import { JobCard } from './JobCard';
 import { translations } from '../translations';
 
@@ -26,6 +25,8 @@ interface KanbanBoardProps {
   onSelectJob: (job: PrintJob) => void;
   onDeleteJob: (id: string) => void;
   language?: 'ar' | 'en';
+  myDepartment?: string | null;
+  config: ServerConfig;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -34,8 +35,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onSelectJob,
   onDeleteJob,
   language = 'ar',
+  myDepartment,
+  config,
 }) => {
-  const [selectedPrinterFilter, setSelectedPrinterFilter] = useState<PrinterType | 'ALL'>('ALL');
+  const [selectedPrinterFilter, setSelectedPrinterFilter] = useState<string | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Icon resolver
@@ -65,9 +68,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   });
 
   // Printer list to render
+  const visiblePrinters = myDepartment && myDepartment !== 'all' 
+    ? (config.printers || []).filter(p => p.departmentId === myDepartment) 
+    : (config.printers || []);
   const printersToRender = selectedPrinterFilter === 'ALL'
-    ? PRINTERS_LIST
-    : PRINTERS_LIST.filter((p) => p.id === selectedPrinterFilter);
+    ? visiblePrinters
+    : visiblePrinters.filter((p) => p.id === selectedPrinterFilter);
 
   const t = translations[language];
 
@@ -109,7 +115,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             {t.all} ({jobs.length})
           </button>
 
-          {PRINTERS_LIST.map((p) => {
+          {visiblePrinters.map((p) => {
             const count = jobs.filter((j) => j.printer === p.id).length;
             return (
               <button
@@ -199,7 +205,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   <span className="font-bold text-xs text-primary-300 font-mono truncate">
                     {t.printerPrefix}: {printer.id.toUpperCase()}
                   </span>
-                  <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">({language === 'ar' ? printer.nameAr : printer.nameEn})</span>
+                  <span className="text-[10px] text-zinc-400 truncate hidden sm:inline">({printer.name})</span>
                 </div>
               </div>
 

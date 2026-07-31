@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PrintJob, FileStatus, ServerConfig } from '../types';
 import { 
   X, 
   Printer, 
@@ -16,8 +17,6 @@ import {
   Edit3,
   Save
 } from 'lucide-react';
-import { PrintJob, FileStatus } from '../types';
-import { PRINTERS_LIST } from '../data/printers';
 
 interface JobDetailsModalProps {
   job: PrintJob | null;
@@ -26,6 +25,7 @@ interface JobDetailsModalProps {
   onUpdateJob?: (id: string, updates: Partial<PrintJob>) => void;
   basePath: string;
   currentDate: string;
+  config: ServerConfig;
 }
 
 export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
@@ -35,6 +35,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   onUpdateJob,
   basePath,
   currentDate,
+  config,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<PrintJob>>({});
@@ -61,7 +62,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
     setIsEditing(false);
   };
 
-  const printerInfo = PRINTERS_LIST.find((p) => p.id === job.printer);
+  const printerInfo = (config.printers || []).find((p) => p.id === job.printer);
   const isDone = job.status === 'done';
 
   const fullFilePath = `${basePath}\\${currentDate}\\${job.printer}${isDone ? '\\done' : ''}\\${job.filename}`;
@@ -74,14 +75,13 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60">
           <div className="flex items-center gap-3">
             <div 
-              className="p-2.5 rounded-xl text-zinc-900 font-bold"
-              style={{ backgroundColor: printerInfo?.accentColor || '#3b82f6' }}
+              className="p-2.5 rounded-xl text-zinc-900 font-bold bg-primary-500"
             >
               <Printer className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg text-zinc-100">{printerInfo?.nameAr}</h3>
+                <h3 className="font-bold text-lg text-zinc-100">{printerInfo?.name || job.printer}</h3>
                 <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
                   {job.printer.toUpperCase()}
                 </span>

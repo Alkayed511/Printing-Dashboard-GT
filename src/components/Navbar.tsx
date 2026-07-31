@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
+  MonitorSmartphone,
   Printer, 
   Network, 
   RefreshCw, 
@@ -36,8 +37,8 @@ import { playNotificationSound } from '../utils/audio';
 
 interface NavbarProps {
   config: ServerConfig;
-  activeTab: 'kanban' | 'compact' | 'stats' | 'settings';
-  setActiveTab: (tab: 'kanban' | 'compact' | 'stats' | 'settings') => void;
+  activeTab: 'kanban' | 'compact' | 'stats' | 'settings' | 'management';
+  setActiveTab: (tab: 'kanban' | 'compact' | 'stats' | 'settings' | 'management') => void;
   onOpenExport: () => void;
   onRefresh: () => void;
   onChangeDate: (newDate: string) => void;
@@ -51,6 +52,8 @@ interface NavbarProps {
   onAcknowledgeAlert?: () => void;
   onSelectJob?: (job: PrintJob) => void;
   onUpdateConfig?: (updates: Partial<ServerConfig>) => void;
+  myDepartment?: string | null;
+  onChangeDepartment?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -70,6 +73,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onAcknowledgeAlert,
   onSelectJob,
   onUpdateConfig,
+  myDepartment,
+  onChangeDepartment,
 }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [dropdownTab, setDropdownTab] = useState<'list' | 'options'>('list');
@@ -279,10 +284,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Settings className="w-3.5 h-3.5" />
             <span>{t.navSettings}</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('management')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'management'
+                ? 'bg-secondary-600 text-white shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>{config.language === 'en' ? 'Management' : 'الإدارة'}</span>
+          </button>
         </nav>
 
         {/* End Section: Stats, Work Date, Dropdown Notification Bell, Refresh, Display & Export */}
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
+
+        {myDepartment && (
+          <button
+            onClick={onChangeDepartment}
+            className="hidden sm:flex items-center gap-1.5 bg-zinc-900 border border-zinc-700/50 hover:bg-zinc-800 hover:border-emerald-500/50 px-2.5 py-1 rounded-md text-xs font-bold text-zinc-300 transition-colors"
+            title={t.navPrinter + ": " + myDepartment}
+          >
+            <MonitorSmartphone className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="capitalize">{myDepartment === 'all' ? (config.language === 'ar' ? 'جميع الأقسام' : 'All Departments') : (config.departments?.find(d => d.id === myDepartment)?.name || myDepartment)}</span>
+          </button>
+        )}
+
           
           {/* Summary Stats Badge */}
           <div className="text-[11px] text-zinc-400 font-mono hidden xl:flex items-center gap-2 bg-zinc-950 px-2 py-1 rounded border border-zinc-800/80 shrink-0">
@@ -796,7 +825,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* TV Display Mode */}
           <button
-            onClick={() => window.open(window.location.pathname + '?display=true', '_blank')}
+            onClick={() => {
+              window.open(window.location.pathname + '?display=true&choose=true', '_blank');
+            }}
             className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold px-2 py-1 rounded-md transition-all text-xs shrink-0"
           >
             <MonitorPlay className="w-3.5 h-3.5 text-secondary-400" />

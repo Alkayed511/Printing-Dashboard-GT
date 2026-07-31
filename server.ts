@@ -3,7 +3,17 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { createServer as createViteServer } from 'vite';
-import { PrintJob, PrinterType, FileStatus, ServerConfig } from './src/types';
+import { PrintJob, FileStatus, ServerConfig } from './src/types';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+
+const firebaseConfigPath = path.join(process.cwd(), 'firebase-applet-config.json');
+let db: any = null;
+if (fs.existsSync(firebaseConfigPath)) {
+  const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf8'));
+  const firebaseApp = initializeApp(firebaseConfig);
+  db = getFirestore(firebaseApp);
+}
 
 const app = express();
 const PORT = 3000;
@@ -43,9 +53,20 @@ let serverConfig: ServerConfig = {
   notificationColor: 'red',
   notificationDuration: 0,
   localIp: '',
+  departments: [
+    { id: 'dept-1', name: 'المطابع' },
+    { id: 'dept-2', name: 'القص' }
+  ],
+  printers: [
+    { id: 'eco', name: 'Eco Printer', departmentId: 'dept-1' },
+    { id: 'solvint', name: 'Solvint Printer', departmentId: 'dept-1' },
+    { id: 'r2r', name: 'R2R Printer', departmentId: 'dept-1' },
+    { id: 'cutter', name: 'Cutter', departmentId: 'dept-2' },
+    { id: 'dtf', name: 'DTF Printer', departmentId: 'dept-1' },
+    { id: 'flat', name: 'Flat Printer', departmentId: 'dept-1' },
+    { id: 'flat small', name: 'Flat Small', departmentId: 'dept-1' }
+  ]
 };
-
-const DEFAULT_PRINTERS: PrinterType[] = ['eco', 'solvint', 'r2r', 'cutter', 'dtf', 'flat', 'flat small'];
 
 // In-memory overrides for real disk jobs
 let jobOverrides: Record<string, Partial<PrintJob>> = {};
@@ -173,7 +194,8 @@ function getOrderId(dateDirName: string, printer: string, filename: string): str
 // Helper: check if a target path is real on local disk
 function scanDateDirectory(dateDir: string): PrintJob[] {
     const realJobs: PrintJob[] = [];
-    DEFAULT_PRINTERS.forEach((printer) => {
+    const printerIds = serverConfig.printers?.map(p => p.id) || [];
+    printerIds.forEach((printer) => {
       const printerDir = path.join(dateDir, printer);
       const doneDir = path.join(printerDir, 'done');
 
@@ -343,7 +365,7 @@ app.get('/api/config', (req: Request, res: Response) => {
   res.json({ ...serverConfig, localIp: getLocalIp() });
 });
 
-app.post('/api/config', (req: Request, res: Response) => {
+app.post('/api/config', async (req: Request, res: Response) => {
   const { basePath, currentDate, autoRefreshInterval, notificationSound, notificationColor, notificationDuration, disableMouseInDisplayMode, themeColor } = req.body;
   if (basePath !== undefined) serverConfig.basePath = basePath;
   if (currentDate !== undefined) serverConfig.currentDate = currentDate;
@@ -357,6 +379,8 @@ app.post('/api/config', (req: Request, res: Response) => {
   if (req.body.customSoundUrl !== undefined) serverConfig.customSoundUrl = req.body.customSoundUrl;
   if (req.body.language !== undefined) serverConfig.language = req.body.language;
   if (req.body.localIp !== undefined) serverConfig.localIp = req.body.localIp;
+  if (req.body.departments !== undefined) serverConfig.departments = req.body.departments;
+  if (req.body.printers !== undefined) serverConfig.printers = req.body.printers;
 
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
@@ -368,7 +392,8 @@ app.post('/api/config', (req: Request, res: Response) => {
       if (!fs.existsSync(dateDir)) {
         fs.mkdirSync(dateDir, { recursive: true });
       }
-      DEFAULT_PRINTERS.forEach((p) => {
+      const printerIds = serverConfig.printers?.map(p => p.id) || [];
+      printerIds.forEach((p) => {
         const printerDir = path.join(dateDir, p);
         const doneDir = path.join(printerDir, 'done');
         if (!fs.existsSync(printerDir)) fs.mkdirSync(printerDir, { recursive: true });
@@ -376,6 +401,14 @@ app.post('/api/config', (req: Request, res: Response) => {
       });
     } catch (err) {
       console.error('Error creating network folder structure:', err);
+    }
+  }
+
+  if (db) {
+    try {
+      await setDoc(doc(db, 'settings', 'global'), serverConfig);
+    } catch (err) {
+      console.error('Error saving config to Firestore:', err);
     }
   }
 
@@ -640,6 +673,21 @@ function getPrinterColor(p: PrinterType): string {
 
 // Start Express server with Vite middleware
 async function startServer() {
+  if (db) {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'global'));
+      if (snap.exists()) {
+        serverConfig = { ...serverConfig, ...snap.data() } as ServerConfig;
+        console.log('Loaded config from Firestore');
+      } else {
+        await setDoc(doc(db, 'settings', 'global'), serverConfig);
+        console.log('Saved default config to Firestore');
+      }
+    } catch (err) {
+      console.error('Error with Firestore config:', err);
+    }
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

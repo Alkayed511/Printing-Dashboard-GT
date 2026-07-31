@@ -1,4 +1,15 @@
-export type PrinterType = 'eco' | 'solvint' | 'r2r' | 'cutter' | 'dtf' | 'flat' | 'flat small';
+export interface Department {
+  id: string;
+  name: string;
+}
+
+export interface Printer {
+  id: string;
+  name: string;
+  departmentId: string;
+}
+
+export type PrinterType = string;
 
 export type FileStatus = 'pending' | 'done';
 
@@ -44,6 +55,8 @@ export interface ServerConfig {
   secondaryColor?: string;
   localIp?: string;
   language?: 'ar' | 'en';
+  departments?: Department[];
+  printers?: Printer[];
 }
 
 export interface PrintStats {

@@ -6,8 +6,10 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CompactGrid } from './components/CompactGrid';
 import { StatsOverview } from './components/StatsOverview';
 import { SettingsTab } from './components/SettingsTab';
+import { ManagementTab } from './components/ManagementTab';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
+import { DepartmentSelector } from './components/DepartmentSelector';
 import { playNotificationSound } from './utils/audio';
 
 // Safelist for dynamic themes: primary-orange primary-blue primary-green primary-purple primary-rose secondary-orange secondary-blue secondary-green secondary-purple secondary-rose
@@ -26,10 +28,26 @@ export default function App() {
     activePath: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats' | 'settings'>('kanban');
+  const [myDepartment, setMyDepartment] = useState<string | 'all' | null>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const deptParam = urlParams.get('dept');
+    if (deptParam) return deptParam;
+    if (urlParams.get('display') === 'true' && urlParams.get('choose') === 'true') {
+      return null;
+    }
+    return (localStorage.getItem('myDepartment') as string | 'all') || null;
+  });
+  const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats' | 'settings' | 'management'>('kanban');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const visibleJobs = myDepartment && myDepartment !== 'all'
+    ? jobs.filter(j => {
+        const deptPrinters = (config.printers || []).filter(p => p.departmentId === myDepartment).map(p => p.id);
+        return deptPrinters.includes(j.printer);
+      })
+    : jobs;
 
   // Acknowledge new order alerts & stop sound
   const handleAcknowledgeAlert = useCallback(() => {
@@ -153,7 +171,7 @@ export default function App() {
       return;
     }
 
-    const newJobs = jobs.filter(
+    const newJobs = visibleJobs.filter(
       (j) => j.status === 'pending' && !seenJobIdsRef.current.has(j.id)
     );
 
@@ -212,7 +230,18 @@ export default function App() {
   const t = translations[config.language || 'ar'];
 
   return (
-    <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-secondary-500 selection:text-white ${config.language === 'en' ? 'dir-ltr text-left' : 'dir-rtl text-right'} select-none`}>
+    <>
+      {!myDepartment ? (
+        <DepartmentSelector 
+          language={config.language || 'ar'} 
+          config={config}
+          onSelect={(dept) => { 
+            setMyDepartment(dept);
+            localStorage.setItem('myDepartment', dept);
+          }} 
+        />
+      ) : (
+      <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-secondary-500 selection:text-white ${config.language === 'en' ? 'dir-ltr text-left' : 'dir-rtl text-right'} select-none`}>
       {!isDisplayMode && <Navbar
         config={config}
         activeTab={activeTab}
@@ -232,6 +261,11 @@ export default function App() {
         onAcknowledgeAlert={handleAcknowledgeAlert}
         onSelectJob={(job) => setSelectedJobDetails(job)}
         onUpdateConfig={(updates) => handleSaveConfig({ ...config, ...updates })}
+        myDepartment={myDepartment}
+        onChangeDepartment={() => {
+          setMyDepartment(null);
+          localStorage.removeItem('myDepartment');
+        }}
       />}
 
       {unacknowledgedJobs.length > 0 && (
@@ -255,7 +289,9 @@ export default function App() {
       <main className={`flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0 ${isDisplayMode && config.disableMouseInDisplayMode ? 'pointer-events-none' : ''}`}>
         {activeTab === 'kanban' && (
           <KanbanBoard
-            jobs={jobs}
+            config={config}
+            myDepartment={myDepartment}
+            jobs={visibleJobs}
             onMoveJob={handleMoveJob}
             onSelectJob={setSelectedJobDetails}
             onDeleteJob={handleDeleteJob}
@@ -266,7 +302,9 @@ export default function App() {
         {activeTab === 'compact' && (
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <CompactGrid
-              jobs={jobs}
+              config={config}
+              myDepartment={myDepartment}
+              jobs={visibleJobs}
               onMoveJob={handleMoveJob}
               onSelectJob={setSelectedJobDetails}
               language={config.language || 'ar'}
@@ -276,13 +314,19 @@ export default function App() {
 
         {activeTab === 'stats' && (
           <div className="flex-1 overflow-y-auto scrollbar-thin">
-            <StatsOverview jobs={jobs} />
+            <StatsOverview jobs={visibleJobs} config={config} />
           </div>
         )}
 
         {activeTab === 'settings' && (
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <SettingsTab config={config} onSaveConfig={handleSaveConfig} />
+          </div>
+        )}
+
+        {activeTab === 'management' && (
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <ManagementTab config={config} onSaveConfig={handleSaveConfig} language={config.language || 'ar'} />
           </div>
         )}
       </main>
@@ -293,6 +337,7 @@ export default function App() {
         />
       )}
       <JobDetailsModal
+        config={config}
         job={selectedJobDetails}
         onClose={() => setSelectedJobDetails(null)}
         onMoveJob={handleMoveJob}
@@ -301,5 +346,7 @@ export default function App() {
         currentDate={config.currentDate}
       />
     </div>
+    )}
+    </>
   );
 }
