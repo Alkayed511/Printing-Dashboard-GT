@@ -9,7 +9,6 @@ interface ManagementTabProps {
 }
 
 export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConfig, language }) => {
-  const [activeView, setActiveView] = useState<'departments' | 'printers'>('departments');
   const [departments, setDepartments] = useState<Department[]>(config.departments || []);
   const [printers, setPrinters] = useState<Printer[]>(config.printers || []);
 
@@ -51,10 +50,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
   };
 
   // Printers Handlers
-  const handleAddPrinter = () => {
-    setEditingPrinter({ id: `printer-${Date.now()}`, name: '', departmentId: departments[0]?.id || '' });
-  };
-
   const handleSavePrinter = () => {
     if (!editingPrinter || !editingPrinter.name.trim() || !editingPrinter.departmentId) return;
     let newPrinters;
@@ -94,131 +89,98 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <LayoutDashboard className="w-7 h-7 text-secondary-400" />
-          {isAr ? 'الإدارة' : 'Management'}
+          {isAr ? 'إدارة الأقسام والطابعات' : 'Departments & Printers Management'}
         </h2>
-        <div className="flex gap-2 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
-          <button
-            onClick={() => setActiveView('departments')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              activeView === 'departments' 
-                ? 'bg-zinc-800 text-primary-300 shadow-sm border border-zinc-700' 
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            {isAr ? 'إدارة الأقسام' : 'Departments'}
-          </button>
-          <button
-            onClick={() => setActiveView('printers')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              activeView === 'printers' 
-                ? 'bg-zinc-800 text-primary-300 shadow-sm border border-zinc-700' 
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            {isAr ? 'إدارة الطابعات' : 'Printers'}
-          </button>
-        </div>
+        <button
+          onClick={handleAddDept}
+          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm"
+        >
+          <Plus className="w-5 h-5" />
+          {isAr ? 'إضافة قسم جديد' : 'Add New Department'}
+        </button>
       </div>
 
-      {activeView === 'departments' && (
-        <div className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-4 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-zinc-100">{isAr ? 'الأقسام' : 'Departments'}</h3>
-            <button
-              onClick={handleAddDept}
-              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              {isAr ? 'إضافة قسم' : 'Add Department'}
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {departments.map(dept => (
-              <div key={dept.id} className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex items-center justify-between group hover:border-zinc-700 transition-all">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {departments.map(dept => {
+          const deptPrinters = printers.filter(p => p.departmentId === dept.id);
+          return (
+            <div key={dept.id} className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-5 flex flex-col gap-4 shadow-sm hover:border-zinc-700 transition-all">
+              <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-zinc-900 rounded-lg text-zinc-400 group-hover:text-primary-400 transition-colors">
+                  <div className="p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-primary-400">
                     <LayoutDashboard className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-zinc-100">{dept.name}</h4>
-                    <span className="text-xs text-zinc-500">
-                      {printers.filter(p => p.departmentId === dept.id).length} {isAr ? 'طابعات' : 'printers'}
-                    </span>
+                    <h3 className="text-lg font-bold text-white">{dept.name}</h3>
+                    <p className="text-xs text-zinc-500">
+                      {deptPrinters.length} {isAr ? 'طابعات مسجلة' : 'registered printers'}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setEditingDept(dept)} className="p-1.5 text-zinc-400 hover:text-primary-400 bg-zinc-900 hover:bg-zinc-800 rounded-lg">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setEditingDept(dept)} className="p-2 text-zinc-400 hover:text-primary-400 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDeleteDept(dept.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 bg-zinc-900 hover:bg-zinc-800 rounded-lg">
+                  <button onClick={() => handleDeleteDept(dept.id)} className="p-2 text-zinc-400 hover:text-rose-400 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            ))}
-            {departments.length === 0 && (
-              <div className="col-span-full py-8 text-center text-zinc-500 text-sm">
-                {isAr ? 'لا يوجد أقسام مضافة' : 'No departments added'}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {activeView === 'printers' && (
-        <div className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-4 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-zinc-100">{isAr ? 'الطابعات' : 'Printers'}</h3>
-            <button
-              onClick={handleAddPrinter}
-              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm"
-              disabled={departments.length === 0}
-            >
-              <Plus className="w-4 h-4" />
-              {isAr ? 'إضافة طابعة' : 'Add Printer'}
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {printers.map(printer => {
-              const dept = departments.find(d => d.id === printer.departmentId);
-              return (
-                <div key={printer.id} className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex flex-col gap-3 group hover:border-zinc-700 transition-all">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-zinc-900 rounded-lg text-zinc-400 group-hover:text-emerald-400 transition-colors">
-                        <PrinterIcon className="w-5 h-5" />
+              <div className="flex-1 space-y-3">
+                {deptPrinters.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2">
+                    {deptPrinters.map(printer => (
+                      <div key={printer.id} className="bg-zinc-950 p-3 rounded-xl border border-zinc-800 flex items-center justify-between group hover:border-zinc-700 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 bg-zinc-900 rounded-md text-zinc-400 group-hover:text-emerald-400 transition-colors">
+                            <PrinterIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-zinc-200">{printer.name}</h4>
+                            <span className="text-[10px] text-zinc-500 font-mono">{printer.id}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setEditingPrinter(printer)} className="p-1.5 text-zinc-400 hover:text-primary-400 hover:bg-zinc-900 rounded-md transition-colors">
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 rounded-md transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-zinc-100">{printer.name}</h4>
-                        <span className="text-xs text-zinc-500 font-mono">{printer.id}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setEditingPrinter(printer)} className="p-1.5 text-zinc-400 hover:text-primary-400 bg-zinc-900 hover:bg-zinc-800 rounded-lg">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 bg-zinc-900 hover:bg-zinc-800 rounded-lg">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                  <div className="bg-zinc-900 py-1.5 px-3 rounded text-xs text-zinc-400 flex items-center justify-between">
-                    <span>{isAr ? 'القسم المرتبط:' : 'Linked Dept:'}</span>
-                    <span className="font-bold text-zinc-200">{dept?.name || 'غير محدد'}</span>
+                ) : (
+                  <div className="py-6 text-center text-zinc-600 text-sm bg-zinc-950/50 rounded-xl border border-zinc-800/50 border-dashed">
+                    {isAr ? 'لا توجد طابعات في هذا القسم' : 'No printers in this department'}
                   </div>
-                </div>
-              );
-            })}
-            {printers.length === 0 && (
-              <div className="col-span-full py-8 text-center text-zinc-500 text-sm">
-                {isAr ? 'لا يوجد طابعات مضافة' : 'No printers added'}
+                )}
               </div>
-            )}
+
+              <button
+                onClick={() => {
+                  setEditingPrinter({ id: `printer-${Date.now()}`, name: '', departmentId: dept.id });
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white px-3 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm group"
+              >
+                <Plus className="w-4 h-4 text-zinc-500 group-hover:text-primary-400 transition-colors" />
+                {isAr ? 'إضافة طابعة للقسم' : 'Add Printer to Department'}
+              </button>
+            </div>
+          );
+        })}
+
+        {departments.length === 0 && (
+          <div className="col-span-full py-16 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50 border-dashed flex flex-col items-center gap-3">
+            <LayoutDashboard className="w-12 h-12 text-zinc-700" />
+            <p className="text-zinc-500 font-medium">
+              {isAr ? 'لم يتم إضافة أي أقسام بعد. ابدأ بإضافة قسم جديد.' : 'No departments added yet. Start by adding a new department.'}
+            </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Editing Department Modal */}
       {editingDept && (
