@@ -69,9 +69,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   });
 
   // Printer list to render
-  const visiblePrinters = myDepartment && myDepartment !== 'all' 
+  const baseVisiblePrinters = myDepartment && myDepartment !== 'all' 
     ? (config.printers || []).filter(p => p.departmentId === myDepartment) 
     : (config.printers || []);
+
+  const visiblePrinters = [...baseVisiblePrinters].sort((a, b) => {
+    const aPending = jobs.filter(j => j.printer === a.id && j.status === 'pending').length;
+    const bPending = jobs.filter(j => j.printer === b.id && j.status === 'pending').length;
+    return bPending - aPending;
+  });
+
   const printersToRender = selectedPrinterFilter === 'ALL'
     ? visiblePrinters
     : visiblePrinters.filter((p) => p.id === selectedPrinterFilter);
