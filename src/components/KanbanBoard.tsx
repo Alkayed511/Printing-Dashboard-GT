@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { 
   Printer, 
   Search, 
@@ -21,7 +22,7 @@ import { translations } from '../translations';
 
 interface KanbanBoardProps {
   jobs: PrintJob[];
-  onMoveJob: (id: string, targetStatus: FileStatus) => void;
+  onMoveJob: (id: string, targetStatus: FileStatus, printer?: string) => void;
   onSelectJob: (job: PrintJob) => void;
   onDeleteJob: (id: string) => void;
   language?: 'ar' | 'en';
@@ -77,8 +78,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   const t = translations[language];
 
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    onMoveJob(draggableId, 'pending', destination.droppableId);
+  };
+
   return (
-    <div className="flex-1 w-full flex flex-col overflow-hidden min-h-0 gap-2">
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="flex-1 w-full flex flex-col overflow-hidden min-h-0 gap-2">
       
       {/* Search & High Density Filter Header */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
@@ -218,23 +227,42 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   </span>
                 </div>
 
-                <div className="p-1.5 flex flex-col gap-1.5 overflow-y-auto scrollbar-thin flex-1 min-h-0">
-                  {pendingJobs.length === 0 ? (
-                    <div className="p-3 text-center text-xs text-zinc-500 italic my-auto">
-                      {t.noFiles}
+                <Droppable droppableId={printer.id}>
+                  {(provided) => (
+                    <div 
+                      className="p-1.5 flex flex-col gap-1.5 overflow-y-auto scrollbar-thin flex-1 min-h-0"
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                    >
+                      {pendingJobs.length === 0 ? (
+                        <div className="p-3 text-center text-xs text-zinc-500 italic my-auto">
+                          {t.noFiles}
+                        </div>
+                      ) : (
+                        pendingJobs.map((job, index) => (
+                          <Draggable key={job.id} draggableId={job.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={snapshot.isDragging ? "opacity-90 scale-[1.02] shadow-xl z-50 rounded-md" : ""}
+                              >
+                                <JobCard
+                                  job={job}
+                                  onMoveJob={onMoveJob}
+                                  onSelectJob={onSelectJob}
+                                  onDeleteJob={onDeleteJob}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))
+                      )}
+                      {provided.placeholder}
                     </div>
-                  ) : (
-                    pendingJobs.map((job) => (
-                      <JobCard
-                        key={job.id}
-                        job={job}
-                        onMoveJob={onMoveJob}
-                        onSelectJob={onSelectJob}
-                        onDeleteJob={onDeleteJob}
-                      />
-                    ))
                   )}
-                </div>
+                </Droppable>
               </div>
 
             </div>
@@ -244,5 +272,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       </div>
 
     </div>
+    </DragDropContext>
   );
 };

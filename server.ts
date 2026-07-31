@@ -449,12 +449,22 @@ app.post('/api/files/move', (req: Request, res: Response) => {
     mockJobs[jobIndex].status = targetStatus;
     mockJobs[jobIndex].updatedAt = new Date().toISOString();
     if (!filename) filename = mockJobs[jobIndex].filename;
+    if (reqPrinter) mockJobs[jobIndex].printer = reqPrinter;
     if (!reqPrinter) printer = mockJobs[jobIndex].printer;
   } else {
     if (!filename || !printer) {
       return res.status(400).json({ error: 'Filename and printer are required for real files' });
     }
   }
+
+  if (!jobOverrides[id]) {
+    jobOverrides[id] = {};
+  }
+  jobOverrides[id].status = targetStatus;
+  if (reqPrinter) {
+    jobOverrides[id].printer = reqPrinter;
+  }
+  jobOverrides[id].updatedAt = new Date().toISOString();
 
   // Attempt physical file move on disk
   const dateDir = path.join(serverConfig.basePath, serverConfig.currentDate);
@@ -498,7 +508,7 @@ app.post('/api/files/move', (req: Request, res: Response) => {
 // PUT /api/files/:id - Update job metadata
 app.put('/api/files/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-  const { customerName, material, quantity, notes, dimensions } = req.body;
+  const { customerName, material, quantity, notes, dimensions, printer } = req.body;
   
   if (!jobOverrides[id]) {
     jobOverrides[id] = {};
@@ -509,6 +519,7 @@ app.put('/api/files/:id', (req: Request, res: Response) => {
   if (quantity !== undefined) jobOverrides[id].quantity = Number(quantity);
   if (notes !== undefined) jobOverrides[id].notes = notes;
   if (dimensions !== undefined) jobOverrides[id].dimensions = dimensions;
+  if (printer !== undefined) jobOverrides[id].printer = printer;
   jobOverrides[id].updatedAt = new Date().toISOString();
 
   // Also update mockJobs if it exists there
