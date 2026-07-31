@@ -405,11 +405,9 @@ app.post('/api/config', async (req: Request, res: Response) => {
   }
 
   if (db) {
-    try {
-      await setDoc(doc(db, 'settings', 'global'), serverConfig);
-    } catch (err) {
+    setDoc(doc(db, 'settings', 'global'), serverConfig).catch((err) => {
       console.error('Error saving config to Firestore:', err);
-    }
+    });
   }
 
   res.json({ success: true, config: { ...serverConfig, localIp: getLocalIp() } });
