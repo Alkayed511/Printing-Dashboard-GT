@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ServerConfig, Department, Printer } from '../types';
-import { Plus, Edit2, Trash2, Printer as PrinterIcon, LayoutDashboard, Save, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Printer as PrinterIcon, LayoutDashboard, Save, X, GripVertical } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface ManagementTabProps {
   config: ServerConfig;
@@ -25,6 +26,43 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
 
   const handleSaveConfig = (newDepts: Department[], newPrinters: Printer[]) => {
     onSaveConfig({ ...config, departments: newDepts, printers: newPrinters });
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination } = result;
+
+    if (!destination) return;
+
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    ) {
+      return;
+    }
+
+    const sourceDeptId = source.droppableId;
+    const destDeptId = destination.droppableId;
+
+    const newPrinters = [...printers];
+    const printersByDept: Record<string, Printer[]> = {};
+    departments.forEach(d => {
+      printersByDept[d.id] = newPrinters.filter(p => p.departmentId === d.id);
+    });
+
+    const [removed] = printersByDept[sourceDeptId].splice(source.index, 1);
+    removed.departmentId = destDeptId;
+    printersByDept[destDeptId].splice(destination.index, 0, removed);
+
+    const finalPrinters: Printer[] = [];
+    departments.forEach(d => {
+      finalPrinters.push(...printersByDept[d.id]);
+    });
+    
+    const orphans = newPrinters.filter(p => !departments.find(d => d.id === p.departmentId));
+    finalPrinters.push(...orphans);
+
+    setPrinters(finalPrinters);
+    handleSaveConfig(departments, finalPrinters);
   };
 
   // Departments Handlers
@@ -100,87 +138,113 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {departments.map(dept => {
-          const deptPrinters = printers.filter(p => p.departmentId === dept.id);
-          return (
-            <div key={dept.id} className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-5 flex flex-col gap-4 shadow-sm hover:border-zinc-700 transition-all">
-              <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-primary-400">
-                    <LayoutDashboard className="w-5 h-5" />
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {departments.map(dept => {
+            const deptPrinters = printers.filter(p => p.departmentId === dept.id);
+            return (
+              <div key={dept.id} className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-5 flex flex-col gap-4 shadow-sm hover:border-zinc-700 transition-all">
+                <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-primary-400">
+                      <LayoutDashboard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">{dept.name}</h3>
+                      <p className="text-xs text-zinc-500">
+                        {deptPrinters.length} {isAr ? 'طابعات مسجلة' : 'registered printers'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">{dept.name}</h3>
-                    <p className="text-xs text-zinc-500">
-                      {deptPrinters.length} {isAr ? 'طابعات مسجلة' : 'registered printers'}
-                    </p>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setEditingDept(dept)} className="p-2 text-zinc-400 hover:text-primary-400 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDeleteDept(dept.id)} className="p-2 text-zinc-400 hover:text-rose-400 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => setEditingDept(dept)} className="p-2 text-zinc-400 hover:text-primary-400 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleDeleteDept(dept.id)} className="p-2 text-zinc-400 hover:text-rose-400 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
 
-              <div className="flex-1 space-y-3">
-                {deptPrinters.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2">
-                    {deptPrinters.map(printer => (
-                      <div key={printer.id} className="bg-zinc-950 p-3 rounded-xl border border-zinc-800 flex items-center justify-between group hover:border-zinc-700 transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="p-1.5 bg-zinc-900 rounded-md text-zinc-400 group-hover:text-emerald-400 transition-colors">
-                            <PrinterIcon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-zinc-200">{printer.name}</h4>
-                            <span className="text-[10px] text-zinc-500 font-mono">{printer.id}</span>
-                          </div>
+                <Droppable droppableId={dept.id}>
+                  {(provided) => (
+                    <div 
+                      className="flex-1 space-y-3 min-h-[100px]"
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                    >
+                      {deptPrinters.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-2">
+                          {deptPrinters.map((printer, index) => (
+                            <Draggable key={printer.id} draggableId={printer.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div 
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={`bg-zinc-950 p-3 rounded-xl border ${snapshot.isDragging ? 'border-primary-500 shadow-lg' : 'border-zinc-800'} flex items-center justify-between group hover:border-zinc-700 transition-all`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div 
+                                      {...provided.dragHandleProps}
+                                      className="p-1 text-zinc-600 hover:text-zinc-300 cursor-grab active:cursor-grabbing transition-colors"
+                                    >
+                                      <GripVertical className="w-4 h-4" />
+                                    </div>
+                                    <div className="p-1.5 bg-zinc-900 rounded-md text-zinc-400 group-hover:text-emerald-400 transition-colors">
+                                      <PrinterIcon className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-sm text-zinc-200">{printer.name}</h4>
+                                      <span className="text-[10px] text-zinc-500 font-mono">{printer.id}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setEditingPrinter(printer)} className="p-1.5 text-zinc-400 hover:text-primary-400 hover:bg-zinc-900 rounded-md transition-colors">
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 rounded-md transition-colors">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setEditingPrinter(printer)} className="p-1.5 text-zinc-400 hover:text-primary-400 hover:bg-zinc-900 rounded-md transition-colors">
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 rounded-md transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                      ) : (
+                        <div className="py-6 h-full flex items-center justify-center text-zinc-600 text-sm bg-zinc-950/50 rounded-xl border border-zinc-800/50 border-dashed">
+                          {isAr ? 'لا توجد طابعات في هذا القسم' : 'No printers in this department'}
+                          {provided.placeholder}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-6 text-center text-zinc-600 text-sm bg-zinc-950/50 rounded-xl border border-zinc-800/50 border-dashed">
-                    {isAr ? 'لا توجد طابعات في هذا القسم' : 'No printers in this department'}
-                  </div>
-                )}
-              </div>
+                      )}
+                    </div>
+                  )}
+                </Droppable>
 
-              <button
-                onClick={() => {
-                  setEditingPrinter({ id: `printer-${Date.now()}`, name: '', departmentId: dept.id });
-                }}
-                className="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white px-3 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm group"
-              >
-                <Plus className="w-4 h-4 text-zinc-500 group-hover:text-primary-400 transition-colors" />
-                {isAr ? 'إضافة طابعة للقسم' : 'Add Printer to Department'}
-              </button>
+                <button
+                  onClick={() => {
+                    setEditingPrinter({ id: `printer-${Date.now()}`, name: '', departmentId: dept.id });
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white px-3 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm group"
+                >
+                  <Plus className="w-4 h-4 text-zinc-500 group-hover:text-primary-400 transition-colors" />
+                  {isAr ? 'إضافة طابعة للقسم' : 'Add Printer to Department'}
+                </button>
+              </div>
+            );
+          })}
+
+          {departments.length === 0 && (
+            <div className="col-span-full py-16 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50 border-dashed flex flex-col items-center gap-3">
+              <LayoutDashboard className="w-12 h-12 text-zinc-700" />
+              <p className="text-zinc-500 font-medium">
+                {isAr ? 'لم يتم إضافة أي أقسام بعد. ابدأ بإضافة قسم جديد.' : 'No departments added yet. Start by adding a new department.'}
+              </p>
             </div>
-          );
-        })}
-
-        {departments.length === 0 && (
-          <div className="col-span-full py-16 text-center bg-zinc-900/30 rounded-2xl border border-zinc-800/50 border-dashed flex flex-col items-center gap-3">
-            <LayoutDashboard className="w-12 h-12 text-zinc-700" />
-            <p className="text-zinc-500 font-medium">
-              {isAr ? 'لم يتم إضافة أي أقسام بعد. ابدأ بإضافة قسم جديد.' : 'No departments added yet. Start by adding a new department.'}
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </DragDropContext>
 
       {/* Editing Department Modal */}
       {editingDept && (
