@@ -5,7 +5,7 @@ import os from 'os';
 import { createServer as createViteServer } from 'vite';
 import { PrintJob, FileStatus, ServerConfig } from './src/types';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 const firebaseConfigPath = path.join(process.cwd(), 'firebase-applet-config.json');
 let db: any = null;
@@ -350,6 +350,12 @@ app.post('/api/upload-sound', (req: Request, res: Response) => {
     serverConfig.customSoundUrl = soundUrl;
     serverConfig.notificationSound = 'custom';
 
+    if (db) {
+      setDoc(doc(db, 'settings', 'global'), serverConfig).catch((err) => {
+        console.error('Error saving config to Firestore:', err);
+      });
+    }
+
     res.json({ success: true, customSoundUrl: soundUrl });
   } catch (err) {
     console.error('Failed to save sound file:', err);
@@ -684,14 +690,15 @@ function getPrinterColor(p: PrinterType): string {
 async function startServer() {
   if (db) {
     try {
-      const snap = await getDoc(doc(db, 'settings', 'global'));
-      if (snap.exists()) {
-        serverConfig = { ...serverConfig, ...snap.data() } as ServerConfig;
-        console.log('Loaded config from Firestore');
-      } else {
-        await setDoc(doc(db, 'settings', 'global'), serverConfig);
-        console.log('Saved default config to Firestore');
-      }
+      onSnapshot(doc(db, 'settings', 'global'), (snap) => {
+        if (snap.exists()) {
+          serverConfig = { ...serverConfig, ...snap.data() } as ServerConfig;
+          console.log('Synced config from Firestore');
+        } else {
+          setDoc(doc(db, 'settings', 'global'), serverConfig);
+          console.log('Saved default config to Firestore');
+        }
+      });
     } catch (err) {
       console.error('Error with Firestore config:', err);
     }
