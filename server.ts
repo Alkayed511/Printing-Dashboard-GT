@@ -12,7 +12,7 @@ let db: any = null;
 if (fs.existsSync(firebaseConfigPath)) {
   const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf8'));
   const firebaseApp = initializeApp(firebaseConfig);
-  db = getFirestore(firebaseApp);
+  db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId || '(default)');
 }
 
 const app = express();

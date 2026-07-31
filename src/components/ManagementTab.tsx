@@ -13,6 +13,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
   const [departments, setDepartments] = useState<Department[]>(config.departments || []);
   const [printers, setPrinters] = useState<Printer[]>(config.printers || []);
 
+  React.useEffect(() => {
+    setDepartments(config.departments || []);
+    setPrinters(config.printers || []);
+  }, [config.departments, config.printers]);
+
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{type: 'dept' | 'printer', id: string} | null>(null);
