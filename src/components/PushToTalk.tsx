@@ -28,6 +28,7 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch voice notes history
   const fetchHistory = async () => {
@@ -56,6 +57,58 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
     };
   }, []);
 
+  const getSupportedMimeType = () => {
+    if (typeof MediaRecorder === 'undefined') return undefined;
+    const types = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4',
+      'audio/aac',
+      'audio/ogg'
+    ];
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return undefined;
+  };
+
+  const requestPermission = async () => {
+    setErrorMessage(null);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        setErrorMessage(
+          isAr
+            ? 'متصفحات الهواتف تمنع الميكروفون على روابط الشبكة غير المشفرة. يُرجى فتح رابط WAN المباشر من قسم الإعدادات لتفعيل الميكروفون.'
+            : 'Mobile browsers block microphone on unencrypted HTTP. Please open using the secure WAN link in Settings.'
+        );
+      } else {
+        setErrorMessage(
+          isAr
+            ? 'المتصفح على هذا الهاتف لا يدعم التسجيل المباشر. يمكنك استخدام زر خيار التسجيل بالملف أسفله.'
+            : 'Browser does not support direct mic recording. Use the audio file upload option below.'
+        );
+      }
+      return false;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // stop test stream tracks
+      stream.getTracks().forEach((track) => track.stop());
+      setErrorMessage(null);
+      return true;
+    } catch (err: any) {
+      console.error('Permission error:', err);
+      let msg = isAr
+        ? 'تعذر الوصول إلى الميكروفون. يُرجى النقر على إيقونة القفل 🔒 في أعلى المتصفح والسماح بالميكروفون.'
+        : 'Microphone permission blocked. Please enable permission in your browser settings.';
+      setErrorMessage(msg);
+      return false;
+    }
+  };
+
   const startRecording = async () => {
     setErrorMessage(null);
     setSendSuccess(false);
@@ -63,24 +116,49 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
     setAudioUrl(null);
     audioChunksRef.current = [];
 
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        setErrorMessage(
+          isAr
+            ? 'متصفح الجوال يتطلب رابطًا مشفرًا (HTTPS) أو رابط WAN لتفعيل الميكروفون. يمكنك نسخ رابط WAN من قسم الإعدادات بلمسة واحدة.'
+            : 'Mobile browsers require HTTPS or WAN secure connection for microphone. Get the WAN link from Settings.'
+        );
+      } else {
+        setErrorMessage(
+          isAr
+            ? 'تعذر العثور على واجهة الميكروفون في المتصفح.'
+            : 'Microphone API not available in this browser.'
+        );
+      }
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      const mimeType = getSupportedMimeType();
+      const options = mimeType ? { mimeType } : undefined;
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(blob);
-        const url = URL.createObjectURL(blob);
+        const recordedBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+        setAudioBlob(recordedBlob);
+        const url = URL.createObjectURL(recordedBlob);
         setAudioUrl(url);
 
-        // Stop all audio tracks to release microphone
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -93,11 +171,15 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
       }, 1000);
     } catch (err: any) {
       console.error('Microphone error:', err);
-      setErrorMessage(
-        isAr 
-          ? 'تعذر الوصول إلى الميكروفون. يُرجى السماح بالصلاحيات في المتصفح.' 
-          : 'Could not access microphone. Please grant permission.'
-      );
+      let msg = isAr 
+        ? 'تعذر الوصول إلى الميكروفون. انقر على زر "تفعيل أذونات الميكروفون" أدناه أو اسمح بالصلاحيات من إعدادات المتصفح.' 
+        : 'Could not access microphone. Tap "Grant Mic Permission" below or update browser settings.';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        msg = isAr
+          ? 'تم حظر الميكروفون! اضغط على علامة القفل 🔒 بطلب المتصفح بجانب الرابط للسمح بالميكروفون.'
+          : 'Microphone blocked by browser policy. Allow access via browser lock icon.';
+      }
+      setErrorMessage(msg);
     }
   };
 
@@ -124,6 +206,20 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (mode === 'hold') {
+      e.preventDefault();
+      startRecording();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (mode === 'hold' && isRecording) {
+      e.preventDefault();
+      stopRecording();
+    }
+  };
+
   const handleMicClick = () => {
     if (mode === 'click') {
       if (isRecording) {
@@ -131,6 +227,16 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
       } else {
         startRecording();
       }
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAudioBlob(file);
+      setAudioUrl(URL.createObjectURL(file));
+      setRecordingTime(5); // estimated duration
+      setErrorMessage(null);
     }
   };
 
@@ -350,8 +456,8 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
           type="button"
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
-          onTouchStart={handleMouseDown}
-          onTouchEnd={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           onClick={handleMicClick}
           disabled={isSending}
           className={`relative z-10 w-28 h-28 rounded-full flex flex-col items-center justify-center transition-all duration-300 shadow-2xl cursor-pointer select-none active:scale-95 ${
@@ -376,6 +482,35 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({ departments = [], langua
             </>
           )}
         </button>
+
+        {/* Permission Request & Mobile File Recording Alternative */}
+        <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
+          <button
+            type="button"
+            onClick={requestPermission}
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-zinc-700 flex items-center gap-1.5 transition-all"
+          >
+            <Mic className="w-3.5 h-3.5 text-red-400" />
+            <span>{isAr ? 'طلب أذونات الميكروفون 🎤' : 'Request Mic Permission 🎤'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-zinc-700 flex items-center gap-1.5 transition-all"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-secondary-400" />
+            <span>{isAr ? 'تسجيل/رفع ملف صوتي 📁' : 'Record/Upload Audio File 📁'}</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/*"
+            capture="microphone"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
 
         {/* Recording status & Live Wave Animation */}
         <div className="text-center space-y-2 relative z-10">
