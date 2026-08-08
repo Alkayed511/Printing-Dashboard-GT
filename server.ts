@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { createServer as createViteServer } from 'vite';
-import { PrintJob, FileStatus, ServerConfig } from './src/types';
+import { PrintJob, FileStatus, ServerConfig, VoiceNote } from './src/types';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
@@ -363,6 +363,79 @@ app.post('/api/upload-sound', (req: Request, res: Response) => {
   }
 });
 
+// Voice Notes State & Endpoints for Push-To-Talk
+let latestVoiceNote: VoiceNote | null = null;
+let voiceNotesHistory: VoiceNote[] = [];
+
+app.get('/api/voice-notes', (req: Request, res: Response) => {
+  res.json({ latestVoiceNote, voiceNotes: voiceNotesHistory });
+});
+
+app.post('/api/voice-notes', (req: Request, res: Response) => {
+  try {
+    const { audioData, sender, departmentId, durationSeconds } = req.body;
+    if (!audioData) {
+      return res.status(400).json({ error: 'No audio data provided' });
+    }
+
+    const noteId = `vn-${Date.now()}`;
+    let audioUrl = audioData;
+
+    // Save audio file to uploads directory if base64
+    if (typeof audioData === 'string' && audioData.startsWith('data:audio')) {
+      try {
+        const match = audioData.match(/^data:audio\/(\w+);base64,/);
+        const ext = match ? (match[1] === 'mp3' ? 'mp3' : 'webm') : 'webm';
+        const base64Data = audioData.replace(/^data:audio\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        const filename = `voice-${noteId}.${ext}`;
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, buffer);
+        audioUrl = `/uploads/${filename}?t=${Date.now()}`;
+      } catch (e) {
+        console.error('Error saving audio file to disk, falling back to base64:', e);
+      }
+    }
+
+    const note: VoiceNote = {
+      id: noteId,
+      audioUrl,
+      sender: sender || 'الإدارة',
+      departmentId: departmentId || 'all',
+      timestamp: new Date().toISOString(),
+      durationSeconds: Number(durationSeconds) || 0
+    };
+
+    latestVoiceNote = note;
+    voiceNotesHistory.unshift(note);
+    if (voiceNotesHistory.length > 30) {
+      voiceNotesHistory = voiceNotesHistory.slice(0, 30);
+    }
+
+    if (db) {
+      setDoc(doc(db, 'voice_notes', 'latest'), note).catch((err) => {
+        console.error('Error saving voice note to Firestore:', err);
+      });
+      setDoc(doc(db, 'voice_notes_history', note.id), note).catch((err) => {
+        console.error('Error saving voice note history to Firestore:', err);
+      });
+    }
+
+    res.json({ success: true, voiceNote: note });
+  } catch (err) {
+    console.error('Failed to process voice note:', err);
+    res.status(500).json({ error: 'Failed to process voice note' });
+  }
+});
+
+app.post('/api/voice-notes/clear', (req: Request, res: Response) => {
+  latestVoiceNote = null;
+  if (db) {
+    setDoc(doc(db, 'voice_notes', 'latest'), { cleared: true, id: '' }).catch(console.error);
+  }
+  res.json({ success: true });
+});
+
 // API Routes
 app.get('/api/config', (req: Request, res: Response) => {
   const isAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
@@ -697,6 +770,17 @@ async function startServer() {
         } else {
           setDoc(doc(db, 'settings', 'global'), serverConfig);
           console.log('Saved default config to Firestore');
+        }
+      });
+
+      onSnapshot(doc(db, 'voice_notes', 'latest'), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data && !data.cleared && data.id) {
+            latestVoiceNote = data as VoiceNote;
+          } else {
+            latestVoiceNote = null;
+          }
         }
       });
     } catch (err) {

@@ -59,6 +59,15 @@ export interface ServerConfig {
   printers?: Printer[];
 }
 
+export interface VoiceNote {
+  id: string;
+  audioUrl: string;
+  sender: string;
+  departmentId?: string | 'all';
+  timestamp: string;
+  durationSeconds?: number;
+}
+
 export interface PrintStats {
   totalJobs: number;
   pendingJobs: number;

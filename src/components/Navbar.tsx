@@ -23,6 +23,8 @@ import {
   Check,
   X,
   Sliders,
+  Mic,
+  Radio,
   CheckCircle2,
   Clock,
   Eye,
@@ -289,12 +291,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('management')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'management'
-                ? 'bg-secondary-600 text-white shadow-sm'
+                ? 'bg-secondary-600 text-white shadow-sm ring-1 ring-red-500/50'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>{config.language === 'en' ? 'Management' : 'الإدارة'}</span>
+            <Mic className="w-3.5 h-3.5 text-red-400" />
+            <span>{config.language === 'en' ? 'Management (Push To Talk)' : 'الإدارة (البث الصوتي 🎤)'}</span>
           </button>
         </nav>
 
