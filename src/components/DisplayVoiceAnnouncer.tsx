@@ -56,6 +56,26 @@ export const DisplayVoiceAnnouncer: React.FC<DisplayVoiceAnnouncerProps> = ({
       audioRef.current.pause();
     }
 
+    if (url.startsWith('tts:')) {
+      const text = decodeURIComponent(url.replace('tts:', ''));
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = isAr ? 'ar-SA' : 'en-US';
+        utterance.rate = 0.95;
+        setIsPlaying(true);
+        utterance.onend = () => setIsPlaying(false);
+        utterance.onerror = () => {
+          setIsPlaying(false);
+          setAudioError(true);
+        };
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setAudioError(true);
+      }
+      return;
+    }
+
     const audio = new Audio(url);
     audioRef.current = audio;
 
@@ -127,6 +147,16 @@ export const DisplayVoiceAnnouncer: React.FC<DisplayVoiceAnnouncerProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* If TTS announcement, show message text */}
+        {activeVoiceNote.audioUrl.startsWith('tts:') && (
+          <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-zinc-100 text-sm font-bold flex items-start gap-2.5">
+            <span className="text-lg">📢</span>
+            <p className="leading-relaxed">
+              {decodeURIComponent(activeVoiceNote.audioUrl.replace('tts:', ''))}
+            </p>
+          </div>
+        )}
 
         {/* Animated Audio Equalizer Visualizer */}
         <div className="flex items-center justify-between gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
