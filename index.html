@@ -3,13 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="description" content="نظام تتبع ومتابعة أوامر الطباعة المباشرة وأقسام المطبعة" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="لوحة الطباعة" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
     <title>نظام تتبع أوامر الطباعة - High Density</title>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function(err) {
+            console.log('SW registration failed: ', err);
+          });
+        });
+      }
+    </script>
     <script>
       (function() {
         try {
           var origFetch = window.fetch;
+          var customFetch = function(input, init) {
+            var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+            // If fetching a direct HTTP URL or local IP address, proxy via backend /api/proxy
+            if (url && (url.startsWith('http://') || url.match(/^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|localhost)/i))) {
+              if (!url.includes(window.location.host)) {
+                var proxyUrl = '/api/proxy?url=' + encodeURIComponent(url);
+                return origFetch(proxyUrl, init);
+              }
+            }
+            return origFetch.apply(this, arguments);
+          };
+
           Object.defineProperty(window, 'fetch', {
-            get: function() { return origFetch; },
+            get: function() { return customFetch; },
             set: function(v) { origFetch = v; },
             configurable: true,
             enumerable: true
