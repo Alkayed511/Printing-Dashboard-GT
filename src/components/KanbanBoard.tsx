@@ -42,7 +42,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   config,
 }) => {
   const [selectedPrinterFilter, setSelectedPrinterFilter] = useState<string | 'ALL'>('ALL');
-  const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Icon resolver
@@ -59,30 +58,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };
 
-  // Helper weight for priority sorting
-  const getPriorityWeight = (job: PrintJob) => {
-    const p = job.priority;
-    if (p === 'urgent') return 4;
-    if (p === 'high') return 3;
-    if (p === 'medium') return 2;
-    if (p === 'low') return 1;
-
-    // Infer priority weight from filename/notes if undefined
-    const text = `${job.filename} ${job.notes || ''}`.toLowerCase();
-    if (text.includes('عاجل') || text.includes('urgent') || text.includes('طارئ')) return 4;
-    if (text.includes('مهم') || text.includes('high')) return 3;
-    if (text.includes('عادي') || text.includes('low')) return 1;
-    return 2;
-  };
-
-  // Filter jobs by search and priority
+  // Filter jobs by search
   const filteredJobs = jobs.filter((job) => {
-    // Priority filter
-    if (selectedPriorityFilter !== 'ALL') {
-      const p = job.priority || (getPriorityWeight(job) === 4 ? 'urgent' : getPriorityWeight(job) === 3 ? 'high' : getPriorityWeight(job) === 1 ? 'low' : 'medium');
-      if (p !== selectedPriorityFilter) return false;
-    }
-
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -119,10 +96,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex-1 w-full flex flex-col overflow-hidden min-h-0 gap-2">
+      <div className="flex-1 w-full flex flex-col overflow-y-auto sm:overflow-hidden min-h-0 gap-2 pb-6 sm:pb-0">
       
       {/* Search & High Density Filter Header */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-2.5 shrink-0">
         
         {/* Search Input */}
         <div className="relative flex-1 w-full">
@@ -131,23 +108,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.searchPlaceholder}
-            className="w-full bg-zinc-950 border border-zinc-700/80 rounded-md pr-3 pl-8 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-primary-500"
+            className="w-full bg-zinc-950 border border-zinc-700/80 rounded-lg pr-3 pl-8 py-2 sm:py-1.5 text-base sm:text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-primary-500"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white p-1"
             >
               {t.clear}
             </button>
           )}
         </div>
 
-        {/* Printers & Priority Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin text-xs pb-1 md:pb-0 shrink-0">
+        {/* Printers Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full scrollbar-none touch-pan-x text-xs pb-1 md:pb-0 shrink-0 w-full md:w-auto">
           <button
             onClick={() => setSelectedPrinterFilter('ALL')}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap transition-all ${
+            className={`px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-[11px] font-bold whitespace-nowrap transition-all min-h-[36px] sm:min-h-0 ${
               selectedPrinterFilter === 'ALL'
                 ? 'bg-primary-600 text-white'
                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -162,7 +139,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <button
                 key={p.id}
                 onClick={() => setSelectedPrinterFilter(p.id)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono font-bold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-[11px] font-mono font-bold whitespace-nowrap transition-all min-h-[36px] sm:min-h-0 ${
                   selectedPrinterFilter === p.id
                     ? 'bg-zinc-100 text-zinc-900'
                     : 'bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700'
@@ -170,44 +147,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               >
                 <span>{p.id.toUpperCase()}</span>
                 {count > 0 && (
-                  <span className="px-1 py-0.2 rounded bg-zinc-700/50 text-[10px]">
+                  <span className="px-1.5 py-0.2 rounded bg-zinc-700/50 text-[10px]">
                     {count}
                   </span>
                 )}
               </button>
             );
           })}
-
-          <div className="h-4 w-px bg-zinc-700/60 mx-0.5 shrink-0" />
-
-          {/* Priority Quick Filter Pills */}
-          <button
-            onClick={() => setSelectedPriorityFilter(selectedPriorityFilter === 'urgent' ? 'ALL' : 'urgent')}
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border ${
-              selectedPriorityFilter === 'urgent'
-                ? 'bg-red-500 text-white border-red-400 scale-105'
-                : 'bg-red-500/10 text-red-300 border-red-500/30 hover:bg-red-500/20'
-            }`}
-          >
-            🔥 {language === 'ar' ? 'عاجل' : 'Urgent'} ({jobs.filter(j => (j.priority === 'urgent' || getPriorityWeight(j) === 4)).length})
-          </button>
-
-          <button
-            onClick={() => setSelectedPriorityFilter(selectedPriorityFilter === 'high' ? 'ALL' : 'high')}
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border ${
-              selectedPriorityFilter === 'high'
-                ? 'bg-rose-500 text-white border-rose-400 scale-105'
-                : 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20'
-            }`}
-          >
-            ⚠️ {language === 'ar' ? 'مرتفع' : 'High'} ({jobs.filter(j => (j.priority === 'high' || getPriorityWeight(j) === 3)).length})
-          </button>
         </div>
 
       </div>
 
       {/* High Density Grid Layout - 4 columns x 2 rows, flex full height */}
-      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 overflow-hidden min-h-0">
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 overflow-y-auto sm:overflow-hidden min-h-0">
         
         {/* Productivity Analytics Card */}
         <div className="bg-primary-950/20 rounded-lg border border-primary-500/30 flex flex-col p-3 justify-between items-center gap-2 relative shadow-sm h-full min-h-0 overflow-hidden">
@@ -259,7 +211,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {printersToRender.map((printer) => {
           const printerJobs = filteredJobs.filter((j) => j.printer === printer.id);
           const pendingJobs = printerJobs.filter((j) => j.status === 'pending');
-          const sortedPendingJobs = [...pendingJobs].sort((a, b) => getPriorityWeight(b) - getPriorityWeight(a));
 
           return (
             <div 
@@ -281,7 +232,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <div className="bg-secondary-950/30 text-secondary-400 text-[11px] font-bold px-2.5 py-1 flex items-center justify-between border-b border-secondary-900/30 shrink-0">
                   <span>{t.pending}</span>
                   <span className="bg-secondary-500/20 px-1.5 py-0.2 rounded font-mono text-secondary-300 text-[10px]">
-                    {sortedPendingJobs.length}
+                    {pendingJobs.length}
                   </span>
                 </div>
 
@@ -292,12 +243,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                     >
-                      {sortedPendingJobs.length === 0 ? (
+                      {pendingJobs.length === 0 ? (
                         <div className="p-3 text-center text-xs text-zinc-500 italic my-auto">
                           {t.noFiles}
                         </div>
                       ) : (
-                        sortedPendingJobs.map((job, index) => (
+                        pendingJobs.map((job, index) => (
                           <React.Fragment key={job.id}>
                             <Draggable draggableId={job.id} index={index}>
                               {(provided, snapshot) => (

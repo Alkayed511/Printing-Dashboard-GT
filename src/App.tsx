@@ -3,7 +3,6 @@ import { PrintJob, PrinterType, FileStatus, ServerConfig } from './types';
 import { translations } from './translations';
 import { Navbar } from './components/Navbar';
 import { KanbanBoard } from './components/KanbanBoard';
-import { CompactGrid } from './components/CompactGrid';
 import { StatsOverview } from './components/StatsOverview';
 import { SettingsTab } from './components/SettingsTab';
 import { ManagementTab } from './components/ManagementTab';
@@ -38,7 +37,7 @@ export default function App() {
     }
     return (localStorage.getItem('myDepartment') as string | 'all') || null;
   });
-  const [activeTab, setActiveTab] = useState<'kanban' | 'compact' | 'stats' | 'settings' | 'management'>('kanban');
+  const [activeTab, setActiveTab] = useState<'kanban' | 'stats' | 'settings' | 'management'>('kanban');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -300,19 +299,6 @@ export default function App() {
             onUpdateJob={handleUpdateJob}
             language={config.language || 'ar'}
           />
-        )}
-
-        {activeTab === 'compact' && (
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
-            <CompactGrid
-              config={config}
-              myDepartment={myDepartment}
-              jobs={visibleJobs}
-              onMoveJob={handleMoveJob}
-              onSelectJob={setSelectedJobDetails}
-              language={config.language || 'ar'}
-            />
-          </div>
         )}
 
         {activeTab === 'stats' && (

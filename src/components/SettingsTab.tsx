@@ -460,6 +460,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   لشتغيل الشاشة عبر شبكة الإنترنت (WAN) على أي شاشة أو هاتف خارجي: <strong>استخدم رابط WAN الأخضر المباشر أعلاه</strong> أو امسح كود QR بكل سهولة!
                 </p>
               </div>
+
+              {/* Mobile SSL Security Notice Card */}
+              <div className="bg-cyan-950/40 border border-cyan-800/60 p-4 rounded-xl text-xs text-cyan-200 leading-relaxed space-y-2.5 shadow-md">
+                <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
+                  <span className="text-base">📱🔒</span>
+                  <span>حل رسالة "الاتصال غير آمن" (Connection is Not Secure) عند الدخول من الهاتف:</span>
+                </div>
+                <div className="space-y-1.5 text-zinc-300">
+                  <p>
+                    <strong className="text-cyan-300">1. سبب الرسالة:</strong> عند فتح التطبيق عبر رابط IP محلي عادي مثل <code className="bg-black/50 px-1.5 py-0.5 rounded text-amber-300 font-mono">http://192.168.x.x:3000</code> بدون تشفير SSL، تقوم متصفحات الجوال (Chrome / Safari) بإظهار تحذير <em>"غير آمن - Not Secure"</em> لحمايتك.
+                  </p>
+                  <p>
+                    <strong className="text-cyan-300">2. الحل المباشر والآمن (HTTPS):</strong> للحصول على قفل الأمان الأخضر 🔒 والاتصال المشفر بالكامل، <strong>افتح التطبيق باستخدام رابط WAN المشفر أعلاه</strong>:
+                  </p>
+                  <div className="bg-zinc-950 p-2 rounded border border-cyan-800/80 font-mono text-emerald-400 text-xs dir-ltr text-left overflow-x-auto my-1 font-bold">
+                    {onlineDisplayUrl.replace('?display=true', '')}
+                  </div>
+                  <p>
+                    <strong className="text-cyan-300">3. ميزات الاتصال الآمن (HTTPS):</strong> يُفعّل الميكروفون والبث الصوتي المباشر والإشعارات الفورية على هواتف الآيفون والأندرويد بدون أي حظر أمني من المتصفح.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
           

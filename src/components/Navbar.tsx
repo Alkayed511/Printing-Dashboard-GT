@@ -39,8 +39,8 @@ import { playNotificationSound } from '../utils/audio';
 
 interface NavbarProps {
   config: ServerConfig;
-  activeTab: 'kanban' | 'compact' | 'stats' | 'settings' | 'management';
-  setActiveTab: (tab: 'kanban' | 'compact' | 'stats' | 'settings' | 'management') => void;
+  activeTab: 'kanban' | 'stats' | 'settings' | 'management';
+  setActiveTab: (tab: 'kanban' | 'stats' | 'settings' | 'management') => void;
   onOpenExport: () => void;
   onRefresh: () => void;
   onChangeDate: (newDate: string) => void;
@@ -233,16 +233,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Center Section: Centered Navigation Tabs */}
-        <nav className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 shrink-0 mx-auto">
+        <nav className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 shrink-0 mx-auto overflow-x-auto max-w-full scrollbar-none touch-pan-x">
           <button
             onClick={() => setActiveTab('kanban')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap min-h-[36px] sm:min-h-0 ${
               activeTab === 'kanban'
                 ? 'bg-primary-600 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
-            <Kanban className="w-3.5 h-3.5" />
+            <Kanban className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             <span>{t.navKanban}</span>
             {pendingJobsCount > 0 && (
               <span className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded font-mono">
@@ -252,51 +252,39 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('compact')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'compact'
-                ? 'bg-primary-600 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>{t.navCompact}</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('stats')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap min-h-[36px] sm:min-h-0 ${
               activeTab === 'stats'
                 ? 'bg-primary-600 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" />
+            <BarChart3 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             <span>{t.navStats}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap min-h-[36px] sm:min-h-0 ${
               activeTab === 'settings'
                 ? 'bg-secondary-600 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
-            <Settings className="w-3.5 h-3.5" />
+            <Settings className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             <span>{t.navSettings}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('management')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap min-h-[36px] sm:min-h-0 ${
               activeTab === 'management'
                 ? 'bg-secondary-600 text-white shadow-sm ring-1 ring-red-500/50'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
             }`}
           >
-            <Mic className="w-3.5 h-3.5 text-red-400" />
-            <span>{config.language === 'en' ? 'Management (Push To Talk)' : 'الإدارة (البث الصوتي 🎤)'}</span>
+            <Mic className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-red-400" />
+            <span>{config.language === 'en' ? 'Management (PTT)' : 'الإدارة (البث 🎤)'}</span>
           </button>
         </nav>
 

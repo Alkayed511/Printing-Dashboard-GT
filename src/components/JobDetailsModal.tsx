@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PrintJob, FileStatus, ServerConfig, JobPriority } from '../types';
-import { getPriorityDetails } from './JobCard';
+import { PrintJob, FileStatus, ServerConfig } from '../types';
 import { 
   X, 
   Printer, 
@@ -14,10 +13,8 @@ import {
   HardDrive, 
   RotateCcw, 
   ArrowLeft,
-  Calendar,
   Edit3,
-  Save,
-  Flame
+  Save
 } from 'lucide-react';
 
 interface JobDetailsModalProps {
@@ -49,8 +46,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
         material: job.material,
         quantity: job.quantity,
         notes: job.notes,
-        dimensions: job.dimensions,
-        priority: job.priority || 'medium'
+        dimensions: job.dimensions
       });
       setIsEditing(false);
     }
@@ -71,40 +67,40 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   const fullFilePath = `${basePath}\\${currentDate}\\${job.printer}${isDone ? '\\done' : ''}\\${job.filename}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-2xl w-full shadow-2xl text-zinc-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-2xl w-full shadow-2xl text-zinc-100 max-h-[92vh] flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60">
-          <div className="flex items-center gap-3">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60 shrink-0">
+          <div className="flex items-center gap-2.5">
             <div 
-              className="p-2.5 rounded-xl text-zinc-900 font-bold bg-primary-500"
+              className="p-2 sm:p-2.5 rounded-xl text-zinc-900 font-bold bg-primary-500"
             >
               <Printer className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg text-zinc-100">{printerInfo?.name || job.printer}</h3>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                <h3 className="font-bold text-base sm:text-lg text-zinc-100">{printerInfo?.name || job.printer}</h3>
+                <span className="text-[10px] sm:text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
                   {job.printer.toUpperCase()}
                 </span>
               </div>
-              <p className="text-xs text-zinc-400">بطاقة تفاصيل أمر الطباعة</p>
+              <p className="text-[11px] sm:text-xs text-zinc-400">بطاقة تفاصيل أمر الطباعة</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {!isEditing ? (
-              <button onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors" title="تعديل البيانات">
+              <button onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white p-2 sm:p-1 rounded-lg hover:bg-zinc-800 transition-colors min-h-[38px] min-w-[38px] flex items-center justify-center" title="تعديل البيانات">
                 <Edit3 className="w-5 h-5" />
               </button>
             ) : (
-              <button onClick={handleSave} className="text-emerald-400 hover:text-emerald-300 p-1 rounded-lg hover:bg-zinc-800 transition-colors" title="حفظ التعديلات">
+              <button onClick={handleSave} className="text-emerald-400 hover:text-emerald-300 p-2 sm:p-1 rounded-lg hover:bg-zinc-800 transition-colors min-h-[38px] min-w-[38px] flex items-center justify-center" title="حفظ التعديلات">
                 <Save className="w-5 h-5" />
               </button>
             )}
             <button
               onClick={onClose}
-              className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors"
+              className="text-zinc-400 hover:text-white p-2 sm:p-1 rounded-lg hover:bg-zinc-800 transition-colors min-h-[38px] min-w-[38px] flex items-center justify-center"
             >
               <X className="w-5 h-5" />
             </button>
@@ -112,7 +108,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
           
           {/* Blueprint Mock Preview */}
           <div className="relative p-6 bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden text-center space-y-2">
@@ -136,33 +132,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
           </div>
 
           {/* Key Specs Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-            <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
-              <span className="text-zinc-400 flex items-center gap-1">
-                <Flame className="w-3.5 h-3.5 text-rose-400" />
-                أولوية الطباعة
-              </span>
-              {!isEditing ? (
-                <div className="pt-0.5">
-                  <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border ${getPriorityDetails(job, config.language || 'ar').badgeBg}`}>
-                    {getPriorityDetails(job, config.language || 'ar').icon}
-                    <span>{getPriorityDetails(job, config.language || 'ar').label}</span>
-                  </span>
-                </div>
-              ) : (
-                <select 
-                  value={editForm.priority || 'medium'} 
-                  onChange={e => setEditForm({...editForm, priority: e.target.value as JobPriority})} 
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-xs focus:outline-none focus:border-secondary-500 font-bold"
-                >
-                  <option value="urgent">🔥 عاجل جداً (Urgent)</option>
-                  <option value="high">⚠️ مرتفع (High)</option>
-                  <option value="medium">⏱️ متوسط (Medium)</option>
-                  <option value="low">✅ عادي (Normal)</option>
-                </select>
-              )}
-            </div>
-
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
               <span className="text-zinc-400 flex items-center gap-1">
                 <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />

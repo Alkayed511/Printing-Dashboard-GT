@@ -168,3 +168,30 @@
     --theme-secondary-950: #4c0519;
   }
 }
+
+/* Mobile Touch Optimization & Safety Rules */
+@media (max-width: 640px) {
+  /* Force minimum 40px - 44px touch target on mobile action buttons to prevent accidental clicks */
+  button, 
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Job card action buttons mobile spacing and sizing */
+  .group button {
+    min-height: 36px;
+    min-width: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Prevent text selection when tapping fast on mobile controls */
+  .touch-pan-x,
+  .touch-pan-y,
+  button,
+  nav {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+}
