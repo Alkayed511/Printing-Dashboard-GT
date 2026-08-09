@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <rect width="512" height="512" rx="128" fill="#09090b"/>
+  <rect x="32" y="32" width="448" height="448" rx="100" fill="none" stroke="#27272a" stroke-width="8"/>
+  
+  <!-- Glowing cyan backdrop gradient -->
+  <defs>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e4e4e7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Top Paper Feeding -->
+  <path d="M160 180 V100 C160 88 170 78 182 78 H330 C342 78 352 88 352 100 V180 Z" fill="url(#paperGrad)"/>
+  <line x1="192" y1="118" x2="320" y2="118" stroke="#06b6d4" stroke-width="10" stroke-linecap="round"/>
+  <line x1="192" y1="148" x2="280" y2="148" stroke="#71717a" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- Printer Main Body -->
+  <rect x="96" y="180" width="320" height="150" rx="28" fill="url(#primaryGrad)"/>
+  
+  <!-- Status Lights & Display -->
+  <circle cx="144" cy="225" r="10" fill="#ffffff" opacity="0.9"/>
+  <circle cx="176" cy="225" r="10" fill="#f59e0b"/>
+  <rect x="300" y="210" width="80" height="30" rx="8" fill="#09090b" opacity="0.6"/>
+
+  <!-- Paper Tray Slot -->
+  <rect x="136" y="275" width="240" height="12" rx="6" fill="#09090b" opacity="0.5"/>
+
+  <!-- Bottom Output Print Paper -->
+  <path d="M144 285 H368 V410 C368 422 358 432 346 432 H166 C154 432 144 422 144 410 Z" fill="url(#paperGrad)" shadow="0 10px 20px rgba(0,0,0,0.5)"/>
+  
+  <!-- Print Lines & Graphics on output paper -->
+  <rect x="176" y="320" width="160" height="16" rx="4" fill="#06b6d4" opacity="0.8"/>
+  <rect x="176" y="350" width="120" height="12" rx="3" fill="#10b981" opacity="0.8"/>
+  <rect x="176" y="374" width="140" height="10" rx="3" fill="#a1a1aa"/>
+</svg>

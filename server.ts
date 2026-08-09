@@ -338,6 +338,40 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
+// Proxy endpoint to handle local network / printer IP requests safely via server
+app.all('/api/proxy', async (req: Request, res: Response) => {
+  const targetUrl = (req.query.url as string) || req.body?.targetUrl;
+  if (!targetUrl) {
+    return res.status(400).json({ error: 'Missing target url parameter' });
+  }
+
+  try {
+    const isPostOrPut = ['POST', 'PUT', 'PATCH'].includes(req.method.toUpperCase());
+    const fetchOptions: RequestInit = {
+      method: req.method,
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        ...(req.headers['content-type'] ? { 'Content-Type': req.headers['content-type'] as string } : {})
+      },
+      ...(isPostOrPut && req.body ? { body: JSON.stringify(req.body) } : {})
+    };
+
+    const response = await fetch(targetUrl, fetchOptions);
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const data = await response.json();
+      return res.status(response.status).json(data);
+    } else {
+      const text = await response.text();
+      return res.status(response.status).send(text);
+    }
+  } catch (err: any) {
+    console.error('Proxy error to targetUrl:', targetUrl, err?.message);
+    return res.status(502).json({ error: 'Failed to reach local endpoint', details: err?.message });
+  }
+});
+
 // POST /api/upload-sound - Upload custom notification sound
 app.post('/api/upload-sound', (req: Request, res: Response) => {
   try {
