@@ -2,6 +2,7 @@ import React from 'react';
 import { PrintJob, FileStatus, ServerConfig } from '../types';
 import { Printer, CheckCircle2, Clock, ArrowLeft, ArrowRight, Layers } from 'lucide-react';
 import { translations } from '../translations';
+import { getPriorityDetails } from './JobCard';
 
 interface CompactGridProps {
   jobs: PrintJob[];
@@ -73,28 +74,35 @@ export const CompactGrid: React.FC<CompactGridProps> = ({
                 <p className="text-xs text-zinc-500 italic py-2">{t.noPendingFiles}</p>
               ) : (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
-                  {pending.map((job) => (
-                    <div
-                      key={job.id}
-                      className="p-2 bg-zinc-950/80 border border-zinc-800 hover:border-zinc-700 rounded-lg flex items-center justify-between gap-2 text-xs text-zinc-200"
-                    >
-                      <span
-                        onClick={() => onSelectJob(job)}
-                        className="truncate cursor-pointer hover:text-secondary-300 font-medium flex-1"
+                  {pending.map((job) => {
+                    const pInfo = getPriorityDetails(job, language);
+                    return (
+                      <div
+                        key={job.id}
+                        className={`p-2 bg-zinc-950/80 border ${pInfo.borderAccent} ${pInfo.borderColor} rounded-lg flex items-center justify-between gap-2 text-xs text-zinc-200`}
                       >
-                        {job.filename}
-                      </span>
-                      <span className="text-zinc-500 font-mono text-[10px]">
-                        {(job.sizeBytes / (1024 * 1024)).toFixed(2)} MB
-                      </span>
-                      <button
-                        onClick={() => onMoveJob(job.id, 'done')}
-                        className="p-1 text-emerald-400 hover:bg-emerald-950/50 rounded transition-colors shrink-0"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <span
+                          onClick={() => onSelectJob(job)}
+                          className="truncate cursor-pointer hover:text-secondary-300 font-medium flex-1 flex items-center gap-1.5"
+                        >
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${pInfo.badgeBg} shrink-0`}>
+                            {pInfo.label}
+                          </span>
+                          <span className="truncate">{job.filename}</span>
+                        </span>
+                        <span className="text-zinc-500 font-mono text-[10px] shrink-0">
+                          {(job.sizeBytes / (1024 * 1024)).toFixed(1)} MB
+                        </span>
+                        <button
+                          onClick={() => onMoveJob(job.id, 'done')}
+                          className="p-1 text-emerald-400 hover:bg-emerald-950/50 rounded transition-colors shrink-0"
+                          title="إتمام"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

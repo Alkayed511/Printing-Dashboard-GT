@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { PrintJob, FileStatus, ServerConfig } from '../types';
+import { PrintJob, FileStatus, ServerConfig, JobPriority } from '../types';
+import { getPriorityDetails } from './JobCard';
 import { 
   X, 
   Printer, 
@@ -15,7 +16,8 @@ import {
   ArrowLeft,
   Calendar,
   Edit3,
-  Save
+  Save,
+  Flame
 } from 'lucide-react';
 
 interface JobDetailsModalProps {
@@ -47,7 +49,8 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
         material: job.material,
         quantity: job.quantity,
         notes: job.notes,
-        dimensions: job.dimensions
+        dimensions: job.dimensions,
+        priority: job.priority || 'medium'
       });
       setIsEditing(false);
     }
@@ -133,7 +136,33 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
           </div>
 
           {/* Key Specs Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+            <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
+              <span className="text-zinc-400 flex items-center gap-1">
+                <Flame className="w-3.5 h-3.5 text-rose-400" />
+                أولوية الطباعة
+              </span>
+              {!isEditing ? (
+                <div className="pt-0.5">
+                  <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border ${getPriorityDetails(job, config.language || 'ar').badgeBg}`}>
+                    {getPriorityDetails(job, config.language || 'ar').icon}
+                    <span>{getPriorityDetails(job, config.language || 'ar').label}</span>
+                  </span>
+                </div>
+              ) : (
+                <select 
+                  value={editForm.priority || 'medium'} 
+                  onChange={e => setEditForm({...editForm, priority: e.target.value as JobPriority})} 
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-100 text-xs focus:outline-none focus:border-secondary-500 font-bold"
+                >
+                  <option value="urgent">🔥 عاجل جداً (Urgent)</option>
+                  <option value="high">⚠️ مرتفع (High)</option>
+                  <option value="medium">⏱️ متوسط (Medium)</option>
+                  <option value="low">✅ عادي (Normal)</option>
+                </select>
+              )}
+            </div>
+
             <div className="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-1">
               <span className="text-zinc-400 flex items-center gap-1">
                 <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />

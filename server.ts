@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { createServer as createViteServer } from 'vite';
-import { PrintJob, FileStatus, ServerConfig, VoiceNote } from './src/types';
+import { PrintJob, FileStatus, ServerConfig, VoiceNote, PrinterType } from './src/types';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
@@ -75,7 +75,7 @@ let jobOverrides: Record<string, Partial<PrintJob>> = {};
 let mockJobs: PrintJob[] = [
   {
     id: 'job-1',
-    filename: 'لوحة_محل_القمة_300x120cm_فينيل_خارجي.pdf',
+    filename: 'لوحة_محل_القمة_300x120cm_عاجل.pdf',
     printer: 'eco',
     status: 'pending',
     sizeBytes: 15420000,
@@ -85,8 +85,9 @@ let mockJobs: PrintJob[] = [
     material: 'فينيل لامع + لمنيشن',
     quantity: 2,
     customerName: 'محل القمة التجاري',
-    notes: 'يرجى مراعاة دقة الألوان الجانبية',
-    previewColor: '#10b981'
+    notes: 'عاجل جداً - التسليم خلال ساعتين',
+    previewColor: '#10b981',
+    priority: 'urgent'
   },
   {
     id: 'job-2',
@@ -101,7 +102,8 @@ let mockJobs: PrintJob[] = [
     quantity: 500,
     customerName: 'شركة المراد للتجارة',
     notes: 'تفريغ دقيق للزوايا الصغيرة',
-    previewColor: '#f43f5e'
+    previewColor: '#f43f5e',
+    priority: 'high'
   },
   {
     id: 'job-3',
@@ -116,7 +118,8 @@ let mockJobs: PrintJob[] = [
     quantity: 1,
     customerName: 'مهرجان التسوق السنوي',
     notes: 'حلقات تثبيت كل 50 سم',
-    previewColor: '#f59e0b'
+    previewColor: '#f59e0b',
+    priority: 'medium'
   },
   {
     id: 'job-4',
@@ -131,7 +134,8 @@ let mockJobs: PrintJob[] = [
     quantity: 25,
     customerName: 'مدارس الأمل',
     notes: 'درجة حرارة المكبس 160 درجة',
-    previewColor: '#a855f7'
+    previewColor: '#a855f7',
+    priority: 'low'
   },
   {
     id: 'job-5',
@@ -146,7 +150,8 @@ let mockJobs: PrintJob[] = [
     quantity: 15,
     customerName: 'جامعة العلوم',
     notes: 'طباعة خلفية معكوسة + طبقة أبيض',
-    previewColor: '#6366f1'
+    previewColor: '#6366f1',
+    priority: 'high'
   },
   {
     id: 'job-6',
@@ -161,7 +166,8 @@ let mockJobs: PrintJob[] = [
     quantity: 3,
     customerName: 'مكتب الهندسة الحديثة',
     notes: 'تم فحص الألوان ومطابقتها',
-    previewColor: '#3b82f6'
+    previewColor: '#3b82f6',
+    priority: 'medium'
   },
   {
     id: 'job-7',
@@ -176,7 +182,8 @@ let mockJobs: PrintJob[] = [
     quantity: 1,
     customerName: 'استوديو الإبداع',
     notes: 'تمت الطباعة والورنيش الحافظ',
-    previewColor: '#06b6d4'
+    previewColor: '#06b6d4',
+    priority: 'low'
   }
 ];
 
@@ -587,7 +594,7 @@ app.post('/api/files/move', (req: Request, res: Response) => {
 // PUT /api/files/:id - Update job metadata
 app.put('/api/files/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-  const { customerName, material, quantity, notes, dimensions, printer } = req.body;
+  const { customerName, material, quantity, notes, dimensions, printer, priority } = req.body;
   
   if (!jobOverrides[id]) {
     jobOverrides[id] = {};
@@ -599,6 +606,7 @@ app.put('/api/files/:id', (req: Request, res: Response) => {
   if (notes !== undefined) jobOverrides[id].notes = notes;
   if (dimensions !== undefined) jobOverrides[id].dimensions = dimensions;
   if (printer !== undefined) jobOverrides[id].printer = printer;
+  if (priority !== undefined) jobOverrides[id].priority = priority;
   jobOverrides[id].updatedAt = new Date().toISOString();
 
   // Also update mockJobs if it exists there

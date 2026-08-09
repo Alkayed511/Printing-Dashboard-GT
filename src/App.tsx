@@ -297,6 +297,7 @@ export default function App() {
             onMoveJob={handleMoveJob}
             onSelectJob={setSelectedJobDetails}
             onDeleteJob={handleDeleteJob}
+            onUpdateJob={handleUpdateJob}
             language={config.language || 'ar'}
           />
         )}

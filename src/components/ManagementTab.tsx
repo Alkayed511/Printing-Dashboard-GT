@@ -180,39 +180,41 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
                       {deptPrinters.length > 0 ? (
                         <div className="grid grid-cols-1 gap-2">
                           {deptPrinters.map((printer, index) => (
-                            <Draggable key={printer.id} draggableId={printer.id} index={index}>
-                              {(provided, snapshot) => (
-                                <div 
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  className={`bg-zinc-950 p-3 rounded-xl border ${snapshot.isDragging ? 'border-primary-500 shadow-lg' : 'border-zinc-800'} flex items-center justify-between group hover:border-zinc-700 transition-all`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div 
-                                      {...provided.dragHandleProps}
-                                      className="p-1 text-zinc-600 hover:text-zinc-300 cursor-grab active:cursor-grabbing transition-colors"
-                                    >
-                                      <GripVertical className="w-4 h-4" />
+                            <React.Fragment key={printer.id}>
+                              <Draggable draggableId={printer.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <div 
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className={`bg-zinc-950 p-3 rounded-xl border ${snapshot.isDragging ? 'border-primary-500 shadow-lg' : 'border-zinc-800'} flex items-center justify-between group hover:border-zinc-700 transition-all`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div 
+                                        {...provided.dragHandleProps}
+                                        className="p-1 text-zinc-600 hover:text-zinc-300 cursor-grab active:cursor-grabbing transition-colors"
+                                      >
+                                        <GripVertical className="w-4 h-4" />
+                                      </div>
+                                      <div className="p-1.5 bg-zinc-900 rounded-md text-zinc-400 group-hover:text-emerald-400 transition-colors">
+                                        <PrinterIcon className="w-4 h-4" />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-bold text-sm text-zinc-200">{printer.name}</h4>
+                                        <span className="text-[10px] text-zinc-500 font-mono">{printer.id}</span>
+                                      </div>
                                     </div>
-                                    <div className="p-1.5 bg-zinc-900 rounded-md text-zinc-400 group-hover:text-emerald-400 transition-colors">
-                                      <PrinterIcon className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-bold text-sm text-zinc-200">{printer.name}</h4>
-                                      <span className="text-[10px] text-zinc-500 font-mono">{printer.id}</span>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button onClick={() => setEditingPrinter(printer)} className="p-1.5 text-zinc-400 hover:text-primary-400 hover:bg-zinc-900 rounded-md transition-colors">
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 rounded-md transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => setEditingPrinter(printer)} className="p-1.5 text-zinc-400 hover:text-primary-400 hover:bg-zinc-900 rounded-md transition-colors">
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 rounded-md transition-colors">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </Draggable>
+                                )}
+                              </Draggable>
+                            </React.Fragment>
                           ))}
                           {provided.placeholder}
                         </div>

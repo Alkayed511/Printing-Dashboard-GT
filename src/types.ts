@@ -13,6 +13,8 @@ export type PrinterType = string;
 
 export type FileStatus = 'pending' | 'done';
 
+export type JobPriority = 'urgent' | 'high' | 'medium' | 'low';
+
 export interface PrintJob {
   id: string;
   filename: string;
@@ -27,6 +29,7 @@ export interface PrintJob {
   customerName?: string;
   notes?: string;
   previewColor?: string;
+  priority?: JobPriority;
 }
 
 export interface PrinterInfo {

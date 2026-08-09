@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   onMoveJob: (id: string, targetStatus: FileStatus, printer?: string) => void;
   onSelectJob: (job: PrintJob) => void;
   onDeleteJob: (id: string) => void;
+  onUpdateJob?: (id: string, updates: Partial<PrintJob>) => void;
   language?: 'ar' | 'en';
   myDepartment?: string | null;
   config: ServerConfig;
@@ -35,11 +36,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onMoveJob,
   onSelectJob,
   onDeleteJob,
+  onUpdateJob,
   language = 'ar',
   myDepartment,
   config,
 }) => {
   const [selectedPrinterFilter, setSelectedPrinterFilter] = useState<string | 'ALL'>('ALL');
+  const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Icon resolver
@@ -56,8 +59,30 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };
 
-  // Filter jobs by search
+  // Helper weight for priority sorting
+  const getPriorityWeight = (job: PrintJob) => {
+    const p = job.priority;
+    if (p === 'urgent') return 4;
+    if (p === 'high') return 3;
+    if (p === 'medium') return 2;
+    if (p === 'low') return 1;
+
+    // Infer priority weight from filename/notes if undefined
+    const text = `${job.filename} ${job.notes || ''}`.toLowerCase();
+    if (text.includes('عاجل') || text.includes('urgent') || text.includes('طارئ')) return 4;
+    if (text.includes('مهم') || text.includes('high')) return 3;
+    if (text.includes('عادي') || text.includes('low')) return 1;
+    return 2;
+  };
+
+  // Filter jobs by search and priority
   const filteredJobs = jobs.filter((job) => {
+    // Priority filter
+    if (selectedPriorityFilter !== 'ALL') {
+      const p = job.priority || (getPriorityWeight(job) === 4 ? 'urgent' : getPriorityWeight(job) === 3 ? 'high' : getPriorityWeight(job) === 1 ? 'low' : 'medium');
+      if (p !== selectedPriorityFilter) return false;
+    }
+
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -118,7 +143,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           )}
         </div>
 
-        {/* Printers Filter Pills */}
+        {/* Printers & Priority Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin text-xs pb-1 md:pb-0 shrink-0">
           <button
             onClick={() => setSelectedPrinterFilter('ALL')}
@@ -152,6 +177,31 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               </button>
             );
           })}
+
+          <div className="h-4 w-px bg-zinc-700/60 mx-0.5 shrink-0" />
+
+          {/* Priority Quick Filter Pills */}
+          <button
+            onClick={() => setSelectedPriorityFilter(selectedPriorityFilter === 'urgent' ? 'ALL' : 'urgent')}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border ${
+              selectedPriorityFilter === 'urgent'
+                ? 'bg-red-500 text-white border-red-400 scale-105'
+                : 'bg-red-500/10 text-red-300 border-red-500/30 hover:bg-red-500/20'
+            }`}
+          >
+            🔥 {language === 'ar' ? 'عاجل' : 'Urgent'} ({jobs.filter(j => (j.priority === 'urgent' || getPriorityWeight(j) === 4)).length})
+          </button>
+
+          <button
+            onClick={() => setSelectedPriorityFilter(selectedPriorityFilter === 'high' ? 'ALL' : 'high')}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border ${
+              selectedPriorityFilter === 'high'
+                ? 'bg-rose-500 text-white border-rose-400 scale-105'
+                : 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20'
+            }`}
+          >
+            ⚠️ {language === 'ar' ? 'مرتفع' : 'High'} ({jobs.filter(j => (j.priority === 'high' || getPriorityWeight(j) === 3)).length})
+          </button>
         </div>
 
       </div>
@@ -209,6 +259,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {printersToRender.map((printer) => {
           const printerJobs = filteredJobs.filter((j) => j.printer === printer.id);
           const pendingJobs = printerJobs.filter((j) => j.status === 'pending');
+          const sortedPendingJobs = [...pendingJobs].sort((a, b) => getPriorityWeight(b) - getPriorityWeight(a));
 
           return (
             <div 
@@ -230,7 +281,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <div className="bg-secondary-950/30 text-secondary-400 text-[11px] font-bold px-2.5 py-1 flex items-center justify-between border-b border-secondary-900/30 shrink-0">
                   <span>{t.pending}</span>
                   <span className="bg-secondary-500/20 px-1.5 py-0.2 rounded font-mono text-secondary-300 text-[10px]">
-                    {pendingJobs.length}
+                    {sortedPendingJobs.length}
                   </span>
                 </div>
 
@@ -241,29 +292,33 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                     >
-                      {pendingJobs.length === 0 ? (
+                      {sortedPendingJobs.length === 0 ? (
                         <div className="p-3 text-center text-xs text-zinc-500 italic my-auto">
                           {t.noFiles}
                         </div>
                       ) : (
-                        pendingJobs.map((job, index) => (
-                          <Draggable key={job.id} draggableId={job.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={snapshot.isDragging ? "opacity-90 scale-[1.02] shadow-xl z-50 rounded-md" : ""}
-                              >
-                                <JobCard
-                                  job={job}
-                                  onMoveJob={onMoveJob}
-                                  onSelectJob={onSelectJob}
-                                  onDeleteJob={onDeleteJob}
-                                />
-                              </div>
-                            )}
-                          </Draggable>
+                        sortedPendingJobs.map((job, index) => (
+                          <React.Fragment key={job.id}>
+                            <Draggable draggableId={job.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={snapshot.isDragging ? "opacity-90 scale-[1.02] shadow-xl z-50 rounded-md" : ""}
+                                >
+                                  <JobCard
+                                    job={job}
+                                    onMoveJob={onMoveJob}
+                                    onSelectJob={onSelectJob}
+                                    onDeleteJob={onDeleteJob}
+                                    onUpdateJob={onUpdateJob}
+                                    language={language}
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          </React.Fragment>
                         ))
                       )}
                       {provided.placeholder}
