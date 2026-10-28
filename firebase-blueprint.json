@@ -1,182 +1,44 @@
 {
-  "entities": {
-    "User": {
-      "title": "User",
-      "description": "User profile with role-based permissions (admin or employee)",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string", "description": "Firebase Auth UID" },
-        "email": { "type": "string", "description": "User email address" },
-        "displayName": { "type": "string", "description": "Full name of staff member" },
-        "role": { "type": "string", "enum": ["admin", "employee"], "description": "Assigned access role" },
-        "phone": { "type": "string", "description": "Contact phone number" },
-        "createdAt": { "type": "string", "description": "Account registration timestamp" },
-        "lastLogin": { "type": "string", "description": "Last sign in timestamp" }
-      },
-      "required": ["uid", "email", "role"]
-    },
-    "Customer": {
-      "title": "Customer",
-      "description": "Print shop client record with financial totals",
-      "type": "object",
-      "properties": {
-        "customerNumber": { "type": "string", "description": "Unique code e.g. CUST-1001" },
-        "name": { "type": "string", "description": "Customer contact person name" },
-        "companyName": { "type": "string", "description": "Company or business entity name" },
-        "phone": { "type": "string", "description": "Primary phone number" },
-        "whatsapp": { "type": "string", "description": "WhatsApp number for notifications" },
-        "address": { "type": "string", "description": "Physical shop or office address" },
-        "email": { "type": "string", "description": "Email address" },
-        "notes": { "type": "string", "description": "Internal customer notes" },
-        "totalInvoiced": { "type": "number", "description": "Total sum of all approved orders in JOD" },
-        "totalPaid": { "type": "number", "description": "Total payments received in JOD" },
-        "balance": { "type": "number", "description": "Current unpaid balance in JOD" },
-        "isArchived": { "type": "boolean", "description": "Archived status" },
-        "createdAt": { "type": "string", "description": "Creation timestamp" },
-        "updatedAt": { "type": "string", "description": "Last update timestamp" }
-      },
-      "required": ["customerNumber", "name", "phone"]
-    },
-    "Order": {
-      "title": "Order",
-      "description": "Printing job order with multiple line items, dimensions and pricing modes",
-      "type": "object",
-      "properties": {
-        "orderNumber": { "type": "string", "description": "Generated sequential order code e.g. ORD-2026-0001" },
-        "customerId": { "type": "string", "description": "Customer ID link" },
-        "customerName": { "type": "string", "description": "Customer display name snapshot" },
-        "customerPhone": { "type": "string", "description": "Customer phone snapshot" },
-        "description": { "type": "string", "description": "General job description" },
-        "printingType": { "type": "string", "description": "UV, Solvent, Eco-Solvent, UV DTF, DTF, Sublimation, Banner, Sticker, CNC, Laser, etc." },
-        "machineId": { "type": "string", "description": "Selected printing machine ID" },
-        "machineName": { "type": "string", "description": "Machine name snapshot" },
-        "materialId": { "type": "string", "description": "Selected material ID" },
-        "materialName": { "type": "string", "description": "Material name snapshot" },
-        "widthCm": { "type": "number", "description": "Width in cm" },
-        "heightCm": { "type": "number", "description": "Height in cm" },
-        "quantity": { "type": "number", "description": "Quantity of pieces" },
-        "pricingMode": { "type": "string", "enum": ["sqm", "linear_meter", "piece", "manual"], "description": "Formula used for line calculation" },
-        "unitPrice": { "type": "number", "description": "Price per unit/meter/sqm in JOD" },
-        "additionalFees": { "type": "number", "description": "Finishing, eyelets, lamination, design fees in JOD" },
-        "discount": { "type": "number", "description": "Discount deduction in JOD" },
-        "totalAmount": { "type": "number", "description": "Final total order price in JOD" },
-        "paidAmount": { "type": "number", "description": "Total amount paid to date in JOD" },
-        "remainingBalance": { "type": "number", "description": "Remaining unpaid balance in JOD" },
-        "paymentStatus": { "type": "string", "enum": ["unpaid", "partial", "paid"], "description": "Payment settlement status" },
-        "status": { "type": "string", "enum": ["new", "designing", "approved", "printing", "finishing", "ready", "delivered", "cancelled"], "description": "Production status" },
-        "deliveryDate": { "type": "string", "description": "Required delivery date" },
-        "productionNotes": { "type": "string", "description": "Workshop and operator instructions" },
-        "assignedEmployee": { "type": "string", "description": "Staff member handling this job" },
-        "fileAttachment": { "type": "string", "description": "File URL, cloud storage or network share link" },
-        "statusHistory": { "type": "string", "description": "JSON serialized history of status changes" },
-        "items": { "type": "string", "description": "JSON serialized multi-item line details" },
-        "createdAt": { "type": "string", "description": "Creation timestamp" },
-        "updatedAt": { "type": "string", "description": "Update timestamp" }
-      },
-      "required": ["orderNumber", "customerId", "customerName", "totalAmount", "status"]
-    },
-    "Payment": {
-      "title": "Payment",
-      "description": "Financial payment transaction recorded against an order",
-      "type": "object",
-      "properties": {
-        "paymentNumber": { "type": "string", "description": "Receipt voucher number e.g. REC-2026-0001" },
-        "orderId": { "type": "string", "description": "Referenced order ID" },
-        "orderNumber": { "type": "string", "description": "Referenced order number" },
-        "customerId": { "type": "string", "description": "Customer ID" },
-        "customerName": { "type": "string", "description": "Customer name snapshot" },
-        "amount": { "type": "number", "description": "Payment amount in JOD (up to 3 decimal places)" },
-        "paymentMethod": { "type": "string", "enum": ["cash", "bank_transfer", "cliq", "card", "cheque"], "description": "Payment instrument" },
-        "paymentDate": { "type": "string", "description": "Transaction date" },
-        "notes": { "type": "string", "description": "Receipt details, reference number, or cheque info" },
-        "recordedBy": { "type": "string", "description": "Employee who registered the payment" },
-        "createdAt": { "type": "string", "description": "Record creation timestamp" }
-      },
-      "required": ["paymentNumber", "orderId", "customerId", "amount", "paymentMethod"]
-    },
-    "Machine": {
-      "title": "Machine",
-      "description": "Printing and cutting workshop equipment",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string", "description": "Machine commercial name" },
-        "code": { "type": "string", "description": "Internal identifier code" },
-        "type": { "type": "string", "description": "Technology type (UV, Eco-Solvent, DTF, CNC, Laser, etc.)" },
-        "maxPrintWidthCm": { "type": "number", "description": "Maximum roll/bed width in cm" },
-        "status": { "type": "string", "enum": ["active", "maintenance", "idle", "archived"], "description": "Operating status" },
-        "notes": { "type": "string", "description": "Service notes and specs" },
-        "createdAt": { "type": "string", "description": "Registration date" }
-      },
-      "required": ["name", "type"]
-    },
-    "Material": {
-      "title": "Material",
-      "description": "Raw media inventory (vinyl, banner, acrylic, wood, foam, DTF film)",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string", "description": "Material commercial name" },
-        "category": { "type": "string", "description": "Material category" },
-        "unit": { "type": "string", "description": "Measurement unit (sqm, linear meter, roll, sheet, piece)" },
-        "costPerUnit": { "type": "number", "description": "Purchase cost in JOD" },
-        "sellPricePerUnit": { "type": "number", "description": "Base selling price in JOD" },
-        "stockQuantity": { "type": "number", "description": "Available stock quantity" },
-        "minStockThreshold": { "type": "number", "description": "Low stock warning threshold" },
-        "isArchived": { "type": "boolean", "description": "Archived status" },
-        "createdAt": { "type": "string", "description": "Creation date" }
-      },
-      "required": ["name", "unit"]
-    },
-    "Settings": {
-      "title": "Settings",
-      "description": "Company profile, branding, invoice configuration and printshop defaults",
-      "type": "object",
-      "properties": {
-        "companyName": { "type": "string", "description": "Print Shop business name in Arabic" },
-        "companyNameEn": { "type": "string", "description": "Print Shop business name in English" },
-        "companyPhone": { "type": "string", "description": "Main business telephone" },
-        "companyWhatsapp": { "type": "string", "description": "Main WhatsApp line" },
-        "companyEmail": { "type": "string", "description": "Official contact email" },
-        "companyAddress": { "type": "string", "description": "Physical shop location" },
-        "taxNumber": { "type": "string", "description": "Tax or registration identifier" },
-        "currency": { "type": "string", "description": "Currency code (JOD)" },
-        "invoiceFooter": { "type": "string", "description": "Terms, guarantee, and thank you notice" },
-        "logoUrl": { "type": "string", "description": "Company logo URL or data URL" }
-      },
-      "required": ["companyName"]
+  "collections": [
+    {
+      "name": "settings",
+      "description": "Global application settings including departments and printers",
+      "documents": [
+        {
+          "id": "global",
+          "fields": {
+            "departments": {
+              "type": "array",
+              "description": "List of departments"
+            },
+            "printers": {
+              "type": "array",
+              "description": "List of printers"
+            },
+            "language": {
+              "type": "string"
+            },
+            "primaryColor": {
+              "type": "string"
+            },
+            "secondaryColor": {
+              "type": "string"
+            },
+            "notificationColor": {
+              "type": "string"
+            },
+            "notificationDuration": {
+              "type": "number"
+            },
+            "localIp": {
+              "type": "string"
+            },
+            "customSoundUrl": {
+              "type": "string"
+            }
+          }
+        }
+      ]
     }
-  },
-  "firestore": {
-    "/users/{userId}": {
-      "schema": "User",
-      "description": "Staff member accounts and role assignments"
-    },
-    "/admins/{userId}": {
-      "schema": "User",
-      "description": "Admin authorization markers"
-    },
-    "/customers/{customerId}": {
-      "schema": "Customer",
-      "description": "Print shop customers collection"
-    },
-    "/orders/{orderId}": {
-      "schema": "Order",
-      "description": "Printing job orders collection"
-    },
-    "/payments/{paymentId}": {
-      "schema": "Payment",
-      "description": "Payment vouchers and deposit transactions"
-    },
-    "/machines/{machineId}": {
-      "schema": "Machine",
-      "description": "Printing machines and cutting equipment"
-    },
-    "/materials/{materialId}": {
-      "schema": "Material",
-      "description": "Printing materials and media types"
-    },
-    "/settings/{settingId}": {
-      "schema": "Settings",
-      "description": "Global print shop company settings and config"
-    }
-  }
+  ]
 }

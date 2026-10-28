@@ -1,33 +1,32 @@
 {
-  "short_name": "PrintManager",
-  "name": "Print Manager - نظام إدارة المطابع الاحترافي",
+  "short_name": "لوحة الطباعة",
+  "name": "نظام تتبع أوامر الطباعة - Printshop Kanban",
   "icons": [
     {
       "src": "/icon.svg",
       "type": "image/svg+xml",
       "sizes": "any",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-192.svg",
       "type": "image/svg+xml",
       "sizes": "192x192",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.svg",
       "type": "image/svg+xml",
       "sizes": "512x512",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
-  "scope": "/",
-  "background_color": "#0B132B",
-  "theme_color": "#0B132B",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
   "display": "standalone",
   "orientation": "any",
   "dir": "rtl",
   "lang": "ar",
-  "description": "نظام شامل ومتكامل لإدارة المطابع: لوحة تحكم حية، حسابات العملاء، أوامر الطباعة، الدفعات، الآلات، التقارير وفواتير ضريبية بالدينار الأردني"
+  "description": "نظام تتبع ومتابعة أوامر الطباعة المباشرة وأقسام المطبعة"
 }
