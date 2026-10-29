@@ -396,9 +396,9 @@ export default function App() {
           </div>
         )}
 
-        {(activeTab === 'calculator' || activeTab === 'customers') && (
+        {activeTab === 'customers' && (
           <div className="flex-1 min-h-0 overflow-hidden">
-            <ManagementWorkspace tab={activeTab} config={config} jobs={jobs} onRefreshJobs={fetchFiles} />
+            <ManagementWorkspace tab="customers" config={config} jobs={jobs} onRefreshJobs={fetchFiles} />
           </div>
         )}
 

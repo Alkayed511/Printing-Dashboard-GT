@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard, KanbanSquare, Calculator, UsersRound, BarChart3, Radio, MessageCircle,
+  LayoutDashboard, KanbanSquare, UsersRound, BarChart3, Radio, MessageCircle,
   Settings2, Printer, Menu, X, ChevronLeft, ChevronRight, RefreshCcw,
   Download, SlidersHorizontal, BellRing, CircleCheck, Clock3, Layers3,
   Sparkles, ArrowUpLeft, Monitor, type LucideIcon
@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from 'react';
 import type { ServerConfig, PrintJob } from '../types';
 
-export type WorkspaceTab = 'home' | 'kanban' | 'calculator' | 'customers' | 'intake' | 'stats' | 'management' | 'settings';
+export type WorkspaceTab = 'home' | 'kanban' | 'customers' | 'intake' | 'stats' | 'management' | 'settings';
 type Props = {
   enabled: boolean;
   activeTab: WorkspaceTab;
@@ -30,7 +30,6 @@ const sections: NavGroup[] = [
   {key: 'main', ar:'مساحة العمل', en:'WORKSPACE', items:[
     {tab:'home', ar:'الرئيسية', en:'Overview', icon:LayoutDashboard},
     {tab:'kanban', ar:'الإنتاج والطباعة', en:'Production', icon:KanbanSquare},
-    {tab:'calculator', ar:'حاسبة الطباعة', en:'Print calculator', icon:Calculator},
     {tab:'customers', ar:'العملاء والحسابات', en:'Customers & accounts', icon:UsersRound},
     {tab:'intake', ar:'واتساب واستلام التصاميم', en:'WhatsApp & intake', icon:MessageCircle},
     {tab:'stats', ar:'التقارير والإحصائيات', en:'Reports & analytics', icon:BarChart3}
@@ -44,7 +43,6 @@ const sections: NavGroup[] = [
 const hints: Record<WorkspaceTab, {ar:string;en:string}> = {
   home:{ar:'كل ما تحتاجه لإدارة يوم العمل من مكان واحد',en:'Your print shop at a glance'},
   kanban:{ar:'تابع المهام والطابعات وحالة الطلبات مباشرة',en:'Track jobs, printers and order status'},
-  calculator:{ar:'احسب الكميات والتكلفة وأنشئ عرض السعر',en:'Calculate, price and prepare a quotation'},
   customers:{ar:'العملاء والفواتير والدفعات في مكان واحد',en:'Customers, invoices and collections'},
   intake:{ar:'استقبل طلبات العملاء ووثّق التعديلات واربط الملف النهائي بالطابعة',en:'Receive designs, track revisions and link production files'},
   stats:{ar:'تعرّف على حجم العمل وأداء الإنتاج',en:'Understand production performance'},
@@ -100,9 +98,9 @@ export default function ModernWorkspaceShell({
           ))}
           <div className="gt-nav-bottom-card">
             <span className="gt-nav-bottom-icon"><Sparkles size={17}/></span>
-            <strong>{tx('أنشئ تسعيرة أسرع','Quote faster')}</strong>
-            <p>{tx('من المقاسات إلى عرض السعر بخطوات قليلة','From measurements to quotation in a few steps')}</p>
-            <button type="button" onClick={()=>navigate('calculator')}>{tx('ابدأ الحساب','Start calculation')} <ArrowUpLeft size={14}/></button>
+            <strong>{tx('تابع طلبات العملاء','Manage customer orders')}</strong>
+            <p>{tx('استقبل التصاميم واربطها بملفات الإنتاج','Receive designs and link them to production files')}</p>
+            <button type="button" onClick={()=>navigate('intake')}>{tx('استلام التصاميم','Design intake')} <ArrowUpLeft size={14}/></button>
           </div>
         </div>
         <button type="button" className="gt-department-button" onClick={onChangeDepartment} title={tx('تغيير القسم','Change department')}>
@@ -130,7 +128,7 @@ export default function ModernWorkspaceShell({
               {pendingAlerts>0?<BellRing size={18}/>:<SlidersHorizontal size={18}/>}
               {pendingAlerts>0&&<span className="gt-alert-count">{pendingAlerts}</span>}
             </button>
-            <button type="button" className="gt-main-action" onClick={()=>navigate('calculator')}><Calculator size={17}/><span>{tx('حساب جديد','New quote')}</span></button>
+            <button type="button" className="gt-main-action" onClick={()=>navigate('intake')}><MessageCircle size={17}/><span>{tx('طلبات التصميم','Design requests')}</span></button>
           </div>
         </header>
 
