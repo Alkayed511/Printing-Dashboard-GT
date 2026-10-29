@@ -1,8 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /settings/{document=**} {
-      allow read, write: if true;
-    }
+    // Disable legacy unrestricted client access; CRM data stays on private SQLite.
+    match /{document=**} { allow read, write: if false; }
   }
 }

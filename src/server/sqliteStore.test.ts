@@ -1,0 +1,17 @@
+import { strict as assert } from 'node:assert';
+import { mkdtempSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+process.env.PRINT_DATA_DIR = mkdtempSync(path.join(os.tmpdir(),'gt-print-db-test-'));
+const {readSnapshot,writeSnapshot,readServerSettings,writeServerSettings,readLocalState,writeLocalState} = await import('./sqliteStore.ts');
+const initial={customers:[{id:'test-1',name:'Test client'}],estimates:[],quotes:[],invoices:[],payments:[],materials:[],orders:[],jobLinks:{job1:'test-1'}};
+writeSnapshot(initial);
+assert.equal((readSnapshot().customers[0] as {name:string}).name,'Test client');
+assert.equal(readSnapshot().jobLinks.job1,'test-1');
+writeServerSettings({language:'ar',currentDate:'2026-10-28'});
+assert.equal(readServerSettings().language,'ar');
+writeLocalState('voice',{id:'note-1'});
+assert.equal(readLocalState('voice',null as {id:string}|null)?.id,'note-1');
+assert.throws(()=>writeSnapshot({...initial,customers:[{id:'dup'},{id:'dup'}]}),/UNIQUE/);
+assert.equal(readSnapshot().customers.length,1,'Failed transaction must rollback');
+console.log('SQLite store and rollback tests passed');

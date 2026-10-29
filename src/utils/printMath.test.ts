@@ -1,0 +1,11 @@
+import { strict as assert } from 'node:assert';
+import { calculateLine, calculateEstimate, defaultLine } from './printMath.ts';
+const x = defaultLine();
+assert.equal(calculateLine({...x, widthCm:100, heightCm:200, quantity:10,wastePercent:0}).netAreaM2,20);
+assert.equal(calculateLine({...x, mode:'roll', widthCm:50, heightCm:100, quantity:5,rollWidthCm:100,wastePercent:0}).linearMeters,2.5);
+assert.equal(calculateLine({...x, mode:'sheet',widthCm:50,heightCm:50,sheetWidthCm:100,sheetHeightCm:100,quantity:5,wastePercent:0}).sheets,2);
+assert.equal(calculateLine({...x, mode:'pieces',quantity:10,materialCostRate:1,printingCostRate:0,finishingCostPerPiece:0,profitPercent:20,profitMethod:'markup',wastePercent:0}).sellingPrice,12);
+assert.equal(calculateLine({...x, mode:'pieces',quantity:10,materialCostRate:1,printingCostRate:0,finishingCostPerPiece:0,profitPercent:20,profitMethod:'margin',wastePercent:0}).sellingPrice,12.5);
+assert.equal(calculateEstimate([{...x,mode:'pieces',quantity:10,materialCostRate:1,printingCostRate:0,profitPercent:0,wastePercent:0}],10,16).total,10.44);
+assert.throws(() => calculateLine({...x,mode:'roll',widthCm:200,heightCm:200,rollWidthCm:100}), /رول/);
+console.log('Print math tests passed');

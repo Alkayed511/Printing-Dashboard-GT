@@ -31,7 +31,7 @@ import {
   SlidersHorizontal,
   Smartphone,
   ShieldAlert,
-  Upload
+  Upload, Calculator, Users
 } from 'lucide-react';
 import { ServerConfig, PrintJob } from '../types';
 import { translations } from '../translations';
@@ -39,8 +39,8 @@ import { playNotificationSound } from '../utils/audio';
 
 interface NavbarProps {
   config: ServerConfig;
-  activeTab: 'kanban' | 'stats' | 'settings' | 'management';
-  setActiveTab: (tab: 'kanban' | 'stats' | 'settings' | 'management') => void;
+  activeTab: 'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers';
+  setActiveTab: (tab: 'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers') => void;
   onOpenExport: () => void;
   onRefresh: () => void;
   onChangeDate: (newDate: string) => void;
@@ -263,6 +263,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>{t.navStats}</span>
           </button>
 
+          <button onClick={() => setActiveTab('calculator')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${activeTab === 'calculator' ? 'bg-primary-600 text-white' : 'text-zinc-400 hover:bg-zinc-800'}`}>
+            <Calculator className="w-4 h-4"/><span>{config.language === 'en' ? 'Print Calculator' : 'حاسبة الطباعة'}</span>
+          </button>
+          <button onClick={() => setActiveTab('customers')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${activeTab === 'customers' ? 'bg-primary-600 text-white' : 'text-zinc-400 hover:bg-zinc-800'}`}>
+            <Users className="w-4 h-4"/><span>{config.language === 'en' ? 'Customers' : 'العملاء'}</span>
+          </button>
           <button
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap min-h-[36px] sm:min-h-0 ${

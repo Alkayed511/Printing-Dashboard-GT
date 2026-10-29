@@ -1,4 +1,8 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import { createHash } from 'node:crypto';
+import { attachManagementRoutes } from './src/server/management';
+import { readServerSettings, writeServerSettings, readLocalState, writeLocalState } from './src/server/sqliteStore';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -40,6 +44,8 @@ function getLocalIp() {
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+const management = attachManagementRoutes(app);
+app.use('/api', management.guard);
 
 // Default configuration
 let serverConfig: ServerConfig = {
@@ -67,6 +73,8 @@ let serverConfig: ServerConfig = {
     { id: 'flat small', name: 'Flat Small', departmentId: 'dept-1' }
   ]
 };
+
+serverConfig = { ...serverConfig, ...readServerSettings() } as ServerConfig;
 
 // In-memory overrides for real disk jobs
 let jobOverrides: Record<string, Partial<PrintJob>> = {};
@@ -191,11 +199,7 @@ let globalOrderCounter = 1001;
 const filePathToOrderMap = new Map<string, string>();
 
 function getOrderId(dateDirName: string, printer: string, filename: string): string {
-  const key = `${dateDirName}:${printer}:${filename}`;
-  if (filePathToOrderMap.has(key)) return filePathToOrderMap.get(key)!;
-  const newId = (globalOrderCounter++).toString();
-  filePathToOrderMap.set(key, newId);
-  return newId;
+  return 'file-' + createHash('sha256').update(JSON.stringify([dateDirName,printer,filename])).digest('hex').slice(0,24);
 }
 
 // Helper: check if a target path is real on local disk
@@ -336,7 +340,7 @@ const uploadsDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', management.guard, express.static(uploadsDir));
 
 // Proxy endpoint to handle local network / printer IP requests safely via server
 app.all('/api/proxy', async (req: Request, res: Response) => {
@@ -391,7 +395,7 @@ app.post('/api/upload-sound', (req: Request, res: Response) => {
     serverConfig.customSoundUrl = soundUrl;
     serverConfig.notificationSound = 'custom';
 
-    if (db) {
+    if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') {
       setDoc(doc(db, 'settings', 'global'), serverConfig).catch((err) => {
         console.error('Error saving config to Firestore:', err);
       });
@@ -405,8 +409,8 @@ app.post('/api/upload-sound', (req: Request, res: Response) => {
 });
 
 // Voice Notes State & Endpoints for Push-To-Talk
-let latestVoiceNote: VoiceNote | null = null;
-let voiceNotesHistory: VoiceNote[] = [];
+let latestVoiceNote: VoiceNote | null = readLocalState<VoiceNote | null>('latestVoiceNote', null);
+let voiceNotesHistory: VoiceNote[] = readLocalState<VoiceNote[]>('voiceNotesHistory', []);
 
 app.get('/api/voice-notes', (req: Request, res: Response) => {
   res.json({ latestVoiceNote, voiceNotes: voiceNotesHistory });
@@ -452,8 +456,10 @@ app.post('/api/voice-notes', (req: Request, res: Response) => {
     if (voiceNotesHistory.length > 30) {
       voiceNotesHistory = voiceNotesHistory.slice(0, 30);
     }
+    writeLocalState('latestVoiceNote', latestVoiceNote);
+    writeLocalState('voiceNotesHistory', voiceNotesHistory);
 
-    if (db) {
+    if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') {
       setDoc(doc(db, 'voice_notes', 'latest'), note).catch((err) => {
         console.error('Error saving voice note to Firestore:', err);
       });
@@ -471,7 +477,8 @@ app.post('/api/voice-notes', (req: Request, res: Response) => {
 
 app.post('/api/voice-notes/clear', (req: Request, res: Response) => {
   latestVoiceNote = null;
-  if (db) {
+  writeLocalState('latestVoiceNote',null);
+  if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') {
     setDoc(doc(db, 'voice_notes', 'latest'), { cleared: true, id: '' }).catch(console.error);
   }
   res.json({ success: true });
@@ -524,12 +531,13 @@ app.post('/api/config', async (req: Request, res: Response) => {
     }
   }
 
-  if (db) {
+  if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') {
     setDoc(doc(db, 'settings', 'global'), serverConfig).catch((err) => {
       console.error('Error saving config to Firestore:', err);
     });
   }
 
+  writeServerSettings(serverConfig as unknown as Record<string,unknown>);
   res.json({ success: true, config: { ...serverConfig, localIp: getLocalIp() } });
 });
 
@@ -540,13 +548,13 @@ app.get('/api/files', (req: Request, res: Response) => {
   if (isReal) {
     const dateDir = path.join(serverConfig.basePath, selectedDate);
     const realJobs = scanDateDirectory(dateDir);
-    const jobsWithOverrides = realJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
-    res.json({ jobs: jobsWithOverrides, isRealStorage: true, scannedPath: dateDir });
+    const jobsWithOverrides = realJobs.map(j => management.decorate({ ...j, ...(jobOverrides[j.id] || {}) }));
+    res.json({ jobs: [...jobsWithOverrides, ...management.getOrders(req)], isRealStorage: true, scannedPath: dateDir });
 
   } else {
     // Return mock database filtered or simulated
-    const jobsWithOverrides = mockJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
-    res.json({ jobs: jobsWithOverrides, isRealStorage: false, scannedPath: path.join(serverConfig.basePath, selectedDate) });
+    const jobsWithOverrides = mockJobs.map(j => management.decorate({ ...j, ...(jobOverrides[j.id] || {}) }));
+    res.json({ jobs: [...jobsWithOverrides, ...management.getOrders(req)], isRealStorage: false, scannedPath: path.join(serverConfig.basePath, selectedDate) });
   }
 });
 
@@ -559,6 +567,11 @@ app.post('/api/files/move', (req: Request, res: Response) => {
     filename?: string;
   };
 
+  if (management.isManagedOrder(id)) {
+    if (targetStatus !== 'done' && targetStatus !== 'pending') return res.status(400).json({error:'Invalid status'});
+    management.updateOrder(id,{status:targetStatus, ...(reqPrinter ? {printer:reqPrinter} : {})});
+    return res.json({success:true, fileMovedOnDisk:false});
+  }
   let filename = reqFilename || '';
   let printer: PrinterType = reqPrinter || 'eco';
   let foundInMock = false;
@@ -628,7 +641,13 @@ app.post('/api/files/move', (req: Request, res: Response) => {
 // PUT /api/files/:id - Update job metadata
 app.put('/api/files/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-  const { customerName, material, quantity, notes, dimensions, printer, priority } = req.body;
+  const { customerName, customerId, material, quantity, notes, dimensions, printer, priority } = req.body;
+  if (management.isManagedOrder(id)) {
+    management.updateOrder(id, {customerName,material,quantity,notes,dimensions,printer,priority});
+    if (customerId !== undefined) management.linkJob(id,String(customerId||''));
+    return res.json({success:true});
+  }
+  if (customerId !== undefined) management.linkJob(id,String(customerId||''));
   
   if (!jobOverrides[id]) {
     jobOverrides[id] = {};
@@ -656,6 +675,7 @@ app.put('/api/files/:id', (req: Request, res: Response) => {
 // DELETE /api/files/:id - Delete an order file
 app.delete('/api/files/:id', (req: Request, res: Response) => {
   const { id } = req.params;
+  if (management.isManagedOrder(id)) return res.json({success:management.removeOrder(id)});
   const initialLen = mockJobs.length;
   mockJobs = mockJobs.filter((j) => j.id !== id);
   res.json({ success: mockJobs.length < initialLen });
@@ -803,7 +823,7 @@ function getPrinterColor(p: PrinterType): string {
 
 // Start Express server with Vite middleware
 async function startServer() {
-  if (db) {
+  if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') {
     try {
       onSnapshot(doc(db, 'settings', 'global'), (snap) => {
         if (snap.exists()) {
