@@ -5,10 +5,16 @@ on:
       - 'src/**'
       - 'server.ts'
       - 'package.json'
+      - 'bun.lock'
       - '.github/workflows/management-ci.yml'
   push:
-    branches:
-      - 'feature/print-management-crm'
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'server.ts'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/management-ci.yml'
 permissions:
   contents: read
 jobs:
@@ -19,8 +25,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-          cache: npm
-      - run: npm ci
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies from synchronized Bun lockfile
+        run: bun install --frozen-lockfile
       - run: npm run lint
       - run: npm run test:management
       - run: npm run build
