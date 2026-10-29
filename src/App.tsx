@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ManagementWorkspace from './components/ManagementWorkspace';
+import WhatsAppIntake from './components/WhatsAppIntake';
 import ModernWorkspaceShell, { type WorkspaceTab } from './components/ModernWorkspaceShell';
 import WorkspaceOverview from './components/WorkspaceOverview';
 import { PrintJob, PrinterType, FileStatus, ServerConfig } from './types';
@@ -386,6 +387,9 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'intake' && (
+          <WhatsAppIntake jobs={jobs} config={config} onRefreshJobs={fetchFiles} />
+        )}
         {activeTab === 'stats' && (
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <StatsOverview jobs={visibleJobs} config={config} />

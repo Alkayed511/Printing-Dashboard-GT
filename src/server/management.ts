@@ -5,6 +5,7 @@ import { readSnapshot, writeSnapshot } from './sqliteStore';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { PrintJob } from '../types';
 import { calculateEstimate, type PrintLine, type EstimateTotals } from '../utils/printMath';
+import { normalizeWhatsApp } from '../utils/whatsapp';
 
 type CRMCustomer = {
   id: string; name: string; contact: string; phone: string; whatsapp: string; email: string;
@@ -81,6 +82,33 @@ function invoiceBalance(id: string) {
   const paid = readDb().payments.filter(p=>p.invoiceId===id).reduce((s,p)=>s+(p.kind==='refund'?-p.amount:p.amount),0);
   return Math.round((invoice.total-paid)*1000)/1000;
 }
+/** Called only by an HMAC-verified official WhatsApp webhook. Does not overwrite user-edited names. */
+export function resolveWhatsappCustomer(phoneInput:string, profileName:string):string {
+  const phone=normalizeWhatsApp(phoneInput);
+  if(!phone) throw new Error('Invalid WhatsApp sender');
+  const store=readDb();
+  const matches=store.customers.filter(c=>!c.archived && (normalizeWhatsApp(c.whatsapp)===phone || normalizeWhatsApp(c.phone)===phone));
+  // Never silently merge duplicate customer records that share a phone.
+  if(matches.length>1)return '';
+  if(matches.length===1){
+    const item=matches[0];
+    if(!item.whatsapp){item.whatsapp='+'+phone;item.updatedAt=now();saveDb();}
+    return item.id;
+  }
+  const newCustomer:CRMCustomer={
+    id:uid(),name:str(profileName)||('واتساب +' + phone),
+    contact:'',phone:'',whatsapp:'+'+phone,email:'',address:'',
+    taxNumber:'',category:'واتساب',paymentTerms:'',creditLimit:0,notes:'',
+    archived:false,createdAt:now(),updatedAt:now()
+  };
+  store.customers.push(newCustomer);
+  saveDb();
+  return newCustomer.id;
+}
+export function validCustomerId(id:string):boolean {
+  return !!readDb().customers.find(c=>c.id===id && !c.archived);
+}
+
 export function attachManagementRoutes(app: Express) {
   const router = Router();
   router.get('/auth', (req,res)=>res.json({ configured, authenticated: authenticated(req) }));

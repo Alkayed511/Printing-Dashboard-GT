@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
-import { attachManagementRoutes } from './src/server/management';
+import { attachManagementRoutes, resolveWhatsappCustomer } from './src/server/management';
+import { mountWhatsAppWebhook, mountIntakeRoutes } from './src/server/whatsapp';
 import { readServerSettings, writeServerSettings, readLocalState, writeLocalState } from './src/server/sqliteStore';
 import path from 'path';
 import fs from 'fs';
@@ -21,6 +22,8 @@ if (fs.existsSync(firebaseConfigPath)) {
 
 const app = express();
 const PORT = 3000;
+// Webhook must receive raw bytes before express.json and before the authentication guard.
+mountWhatsAppWebhook(app,resolveWhatsappCustomer);
 
 function getLocalIp() {
   if (serverConfig && serverConfig.localIp && serverConfig.localIp.trim()) {
@@ -45,6 +48,7 @@ function getLocalIp() {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const management = attachManagementRoutes(app);
+mountIntakeRoutes(app,management.guard,management.linkJob);
 app.use('/api', management.guard);
 
 // Default configuration
