@@ -7,6 +7,9 @@ import {
   type IncomingMessage, type IntakeStatus, type Revision
 } from './intakeStore';
 import {normalizeWhatsApp} from '../utils/whatsapp';
+import {addLinkedFiles, editLinkedFile, getLinkedFiles, removeLinkedFile, type FileSnapshot} from './intakeLinks';
+import type {PrintJob} from '../types';
+import type {Request} from 'express';
 import {validCustomerId} from './management';
 
 const safe=(x:unknown,limit=250)=>typeof x==='string'?x.trim().slice(0,limit):'';
@@ -76,7 +79,7 @@ export function mountWhatsAppWebhook(app:Express,resolveCustomer:(phone:string,n
   });
 }
 
-export function mountIntakeRoutes(app:Express,guard:RequestHandler,linkJob:(jobId:string,customerId:string)=>void){
+export function mountIntakeRoutes(app:Express,guard:RequestHandler,linkJob:(jobId:string,customerId:string)=>void,getJobs:(req:Request)=>PrintJob[]){
   const r=express.Router();
   r.use(guard);
   r.get('/data',(_req,res)=>{res.set('Cache-Control','no-store');res.json({
@@ -127,15 +130,75 @@ export function mountIntakeRoutes(app:Express,guard:RequestHandler,linkJob:(jobI
       res.status(201).json(record);
     }catch(e){res.status(400).json({error:e instanceof Error?e.message:'تعذّر حفظ النسخة'});}
   });
+  // Read only currently scanned/managed jobs. Never trust file names supplied by a browser.
+  const jobSelection=(req:Request,ids:string[],customerId:string):FileSnapshot[]=>{
+    if(!ids.length||ids.length>25||new Set(ids).size!==ids.length)throw Error('اختر من 1 إلى 25 ملفاً مختلفاً');
+    const current=getJobs(req);
+    return ids.map(jobId=>{
+      const j=current.find(x=>x.id===jobId);
+      if(!j)throw Error('أحد الملفات لم يعد ظاهراً. حدّث قائمة الطباعة وأعد اختياره');
+      if(j.customerId&&j.customerId!==customerId)throw Error('أحد الملفات مرتبط بعميل مختلف');
+      return {jobId:j.id,filename:j.filename,printer:j.printer};
+    });
+  };
+  const unlinkUnused=(oldId:string)=>{
+    if(oldId&&!listRequests().some(r=>getLinkedFiles(r).some(l=>l.jobId===oldId)))linkJob(oldId,'');
+  };
+
+  r.post('/requests/:id/files',(req,res)=>{
+    try{
+      const item=getRequest(req.params.id);
+      if(!item||!validCustomerId(item.customerId))throw Error('الطلب أو العميل غير موجود');
+      const ids=(Array.isArray(req.body?.jobIds)?req.body.jobIds:[]).map((id:unknown)=>safe(id,230));
+      const selected=jobSelection(req,ids,item.customerId);
+      const result=updateRequest(item.id,r=>{
+        addLinkedFiles(r,selected,newId,time());
+        if(r.status==='ready')r.status='printing';
+      });
+      for(const file of selected)linkJob(file.jobId,item.customerId);
+      res.status(201).json(result);
+    }catch(e){res.status(400).json({error:e instanceof Error?e.message:'تعذّر ربط الملفات'});}
+  });
+  r.put('/requests/:id/files/:linkId',(req,res)=>{
+    try{
+      const item=getRequest(req.params.id);
+      if(!item||!validCustomerId(item.customerId))throw Error('الطلب أو العميل غير موجود');
+      const existing=getLinkedFiles(item).find(x=>x.id===req.params.linkId);
+      if(!existing)throw Error('الربط غير موجود');
+      const requestedId=safe(req.body?.jobId,230)||existing.jobId;
+      const note=req.body?.note===undefined?existing.note:safe(req.body.note,500);
+      const selected=requestedId===existing.jobId
+        ? {jobId:existing.jobId,filename:existing.filename,printer:existing.printer}
+        : jobSelection(req,[requestedId],item.customerId)[0];
+      let previous='';
+      const result=updateRequest(item.id,r=>{
+        previous=editLinkedFile(r,req.params.linkId,selected,note,time()).previousJobId;
+      });
+      if(requestedId!==existing.jobId)linkJob(requestedId,item.customerId);
+      unlinkUnused(previous);
+      res.json(result);
+    }catch(e){res.status(400).json({error:e instanceof Error?e.message:'تعذّر تعديل الربط'});}
+  });
+  r.delete('/requests/:id/files/:linkId',(req,res)=>{
+    try{
+      const item=getRequest(req.params.id);
+      if(!item)throw Error('الطلب غير موجود');
+      let removedJobId='';
+      const result=updateRequest(item.id,r=>{removedJobId=removeLinkedFile(r,req.params.linkId).jobId;});
+      unlinkUnused(removedJobId);
+      res.json(result);
+    }catch(e){res.status(400).json({error:e instanceof Error?e.message:'تعذّر حذف الربط'});}
+  });
+  // Existing client compatibility: this now adds one file instead of overwriting earlier links.
   r.post('/requests/:id/link-job',(req,res)=>{
     try{
-      const jobId=safe(req.body?.jobId,230);
-      const record=getRequest(req.params.id);
-      if(!record)throw Error('الطلب غير موجود');
-      if(!validCustomerId(record.customerId))throw Error('العميل غير موجود');
-      // Explicitly select a scanned/managed production job; never auto-match filenames.
-      if(jobId)linkJob(jobId,record.customerId);
-      const result=updateRequest(record.id,item=>{item.linkedJobId=jobId;if(jobId&&item.status==='ready')item.status='printing';});
+      const item=getRequest(req.params.id);
+      if(!item||!validCustomerId(item.customerId))throw Error('الطلب أو العميل غير موجود');
+      const id=safe(req.body?.jobId,230);
+      if(!id)throw Error('اختر ملفاً من قائمة الإنتاج');
+      const selected=jobSelection(req,[id],item.customerId);
+      const result=updateRequest(item.id,r=>{addLinkedFiles(r,selected,newId,time());if(r.status==='ready')r.status='printing';});
+      linkJob(id,item.customerId);
       res.json(result);
     }catch(e){res.status(400).json({error:e instanceof Error?e.message:'فشل الربط'});}
   });

@@ -48,7 +48,14 @@ function getLocalIp() {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const management = attachManagementRoutes(app);
-mountIntakeRoutes(app,management.guard,management.linkJob);
+mountIntakeRoutes(app,management.guard,management.linkJob,(req)=>{
+  // Resolve only files actually visible in the current production date (no filename guesses).
+  const day=serverConfig.currentDate;
+  const files=checkDiskStorage(serverConfig.basePath,day)
+    ? scanDateDirectory(path.join(serverConfig.basePath,day))
+    : mockJobs;
+  return [...files.map(j=>management.decorate({...j,...(jobOverrides[j.id]||{})})),...management.getOrders(req)];
+});
 app.use('/api', management.guard);
 
 // Default configuration

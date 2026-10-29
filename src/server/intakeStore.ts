@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import {getLinkedFiles,type LinkedProductionFile} from './intakeLinks';
 
 export type IncomingMessage = {
   id: string; customerId: string; from: string; name: string;
@@ -14,6 +15,7 @@ export type IntakeStatus = 'received' | 'designing' | 'ready' | 'printing' | 'co
 export type IntakeRequest = {
   id: string; customerId: string; source: 'whatsapp' | 'manual'; sourceMessageId: string;
   title: string; notes: string; status: IntakeStatus; linkedJobId: string;
+  linkedFiles?: LinkedProductionFile[];
   revisions: Revision[]; createdAt: string; updatedAt: string;
 };
 let db: DatabaseSync | undefined;
@@ -28,6 +30,7 @@ function open() {
   db=con;return con;
 }
 const clock=()=>new Date().toISOString();
+const normalizeRequest=(record:IntakeRequest):IntakeRequest=>({...record,linkedFiles:getLinkedFiles(record)});
 export const newId=()=>randomUUID();
 export const requestId=()=> 'GT-' + Date.now().toString(36).toUpperCase() + '-' + randomUUID().slice(0,5).toUpperCase();
 export function storeIncoming(message:IncomingMessage) {
@@ -49,11 +52,11 @@ export function incomingMessages():IncomingMessage[] {
 }
 export function listRequests():IntakeRequest[]{
   return (open().prepare('SELECT payload FROM requests ORDER BY updated_at DESC').all() as {payload:string}[])
-    .map(r=>JSON.parse(r.payload) as IntakeRequest);
+    .map(r=>normalizeRequest(JSON.parse(r.payload) as IntakeRequest));
 }
 export function getRequest(id:string):IntakeRequest|undefined{
   const row=open().prepare('SELECT payload FROM requests WHERE id=?').get(id) as {payload:string}|undefined;
-  return row?JSON.parse(row.payload) as IntakeRequest:undefined;
+  return row?normalizeRequest(JSON.parse(row.payload) as IntakeRequest):undefined;
 }
 export function insertRequest(record:IntakeRequest){
   open().prepare('INSERT INTO requests(id,payload,updated_at) VALUES(?,?,?)')
@@ -69,7 +72,7 @@ export function updateRequest(id:string,patch:(record:IntakeRequest)=>void):Inta
 }
 export function createRequest(options:Pick<IntakeRequest,'customerId'|'source'|'sourceMessageId'|'title'|'notes'>):IntakeRequest{
   const timestamp=clock();
-  const item:IntakeRequest={...options,id:requestId(),status:'received',linkedJobId:'',revisions:[],createdAt:timestamp,updatedAt:timestamp};
+  const item:IntakeRequest={...options,id:requestId(),status:'received',linkedJobId:'',linkedFiles:[],revisions:[],createdAt:timestamp,updatedAt:timestamp};
   insertRequest(item);
   return item;
 }

@@ -5,6 +5,7 @@ import {whatsappUrl} from '../utils/whatsapp';
 import type {PrintJob,ServerConfig} from '../types';
 import type {Customer,ManagementData} from '../types/management';
 import type {IncomingMessage,IntakeRequest,IntakeStatus} from '../server/intakeStore';
+import type {LinkedProductionFile} from '../server/intakeLinks';
 
 type Props={jobs:PrintJob[];config:ServerConfig;onRefreshJobs:()=>void};
 type IntakeData={messages:IncomingMessage[];requests:IntakeRequest[];whatsappConfigured:boolean};
@@ -34,7 +35,11 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
   const [newCustomer,setNewCustomer]=useState({name:'',phone:''});
   const [newOrder,setNewOrder]=useState({customerId:'',title:'',notes:'',sourceMessageId:''});
   const [revision,setRevision]=useState({fileName:'',dimensions:'',printer:'',notes:''});
-  const [linkJobId,setLinkJobId]=useState('');
+  const [linkSelection,setLinkSelection]=useState<string[]>([]);
+  const [fileSearch,setFileSearch]=useState('');
+  const [editingLinkId,setEditingLinkId]=useState('');
+  const [replacementJobId,setReplacementJobId]=useState('');
+  const [linkNote,setLinkNote]=useState('');
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [notice,setNotice]=useState('');
@@ -58,8 +63,15 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
   const customerPhone=(id:string)=>customers.find(c=>c.id===id)?.whatsapp||customers.find(c=>c.id===id)?.phone||'';
   const selectedMsg=intake.messages.find(m=>m.id===selectedMessage);
   const current=intake.requests.find(r=>r.id===selectedRequest);
-  const matchingJob=jobs.find(j=>j.id===current?.linkedJobId);
-  const linkedTo=(r:IntakeRequest)=>jobs.find(j=>j.id===r.linkedJobId)?.status;
+  const activeLinks=current?.linkedFiles||[];
+  const linkedTo=(r:IntakeRequest):'done'|'pending'|undefined=>{
+    const active=(r.linkedFiles||[]).map(l=>jobs.find(j=>j.id===l.jobId)).filter((j):j is PrintJob=>Boolean(j));
+    if(!active.length)return undefined;
+    return active.every(j=>j.status==='done')?'done':'pending';
+  };
+  const selectableJobs=useMemo(()=>jobs.filter(j=>
+    [j.filename,j.printer,j.customerName||''].some(x=>x.toLowerCase().includes(fileSearch.trim().toLowerCase()))
+  ),[jobs,fileSearch]);
   const filteredMessages=useMemo(()=>intake.messages.filter(m=>
     [m.text,m.fileName,m.name,m.from,customerName(m.customerId)]
       .some(v=>v.toLowerCase().includes(filter.trim().toLowerCase()))),[intake.messages,filter,customers]);
@@ -152,11 +164,11 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
       <section className="rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden">
         <header className="p-4 border-b border-slate-700 flex justify-between font-bold"><span>طلبات التصميم</span><span className="text-slate-400 text-xs">{filteredRequests.length} طلب</span></header>
         {filteredRequests.length===0?<p className="p-8 text-center text-slate-400 text-sm">ابدأ بإضافة طلب يدوي أو حوّل رسالة واردة إلى طلب.</p>:
-          filteredRequests.map(o=><button key={o.id} className={'w-full text-right border-b border-slate-800 p-4 hover:bg-slate-800/70 '+(selectedRequest===o.id?'bg-slate-800':'')} onClick={()=>{setSelectedRequest(o.id);setLinkJobId(o.linkedJobId);}}>
+          filteredRequests.map(o=><button key={o.id} className={'w-full text-right border-b border-slate-800 p-4 hover:bg-slate-800/70 '+(selectedRequest===o.id?'bg-slate-800':'')} onClick={()=>{setSelectedRequest(o.id);setLinkSelection([]);setEditingLinkId('');setReplacementJobId('');setLinkNote('');}}>
             <div className="flex justify-between items-start gap-3"><div><strong className="block text-sm">{o.title}</strong><span className="text-blue-300 text-xs font-mono">{o.id}</span></div>
               <span className="text-xs rounded-lg bg-slate-700 px-2 py-1">{stages.find(x=>x.id===o.status)?.title}</span></div>
             <p className="mt-2 text-sm text-slate-300">{customerName(o.customerId)} · {o.source==='whatsapp'?'واتساب':'يدوي'}</p>
-            <p className="mt-1 text-xs text-slate-400">النسخ: {o.revisions.length} · {o.linkedJobId?'مرتبط بالطابعة':'غير مرتبط بالطابعة'} {linkedTo(o)?'· '+(linkedTo(o)==='done'?'تمت الطباعة':'بانتظار الطباعة'):''}</p>
+            <p className="mt-1 text-xs text-slate-400">النسخ: {o.revisions.length} · {(o.linkedFiles||[]).length?((o.linkedFiles||[]).length+' ملفات مرتبطة'):'غير مرتبط بالطابعة'} {linkedTo(o)?'· '+(linkedTo(o)==='done'?'تمت الطباعة':'بانتظار الطباعة'):''}</p>
           </button>)}
       </section>
       <section className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-4">
@@ -179,16 +191,90 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
           <div className="space-y-1 border-t border-slate-700 pt-3"><h4 className="font-bold text-sm">سجل أسماء الملفات والمقاسات</h4>
             {current.revisions.length===0?<p className="text-xs text-slate-400">لم يتم توثيق نسخ التصميم بعد.</p>:current.revisions.map((v,i)=><div className="rounded-lg bg-slate-800/70 p-3 text-xs space-y-1" key={v.id}><b>النسخة {i+1} — {v.fileName}</b><p>{v.dimensions||'مقاس غير محدد'} · {v.printer||'طابعة غير محددة'}</p><p className="text-slate-400">{v.notes||stamp(v.createdAt)}</p></div>)}
           </div>
-          <div className="border-t border-slate-700 pt-3 space-y-2"><h4 className="font-bold flex gap-2 items-center"><Link2 size={16}/> ربط ملف الطباعة على الشبكة</h4>
-            <p className="text-xs text-slate-400">بعد نقل الملف إلى جهاز الطابعة وظهوره في Kanban، اختره هنا. الربط برقم الملف المكتشف، وليس باسمه القديم.</p>
-            <select className={control} value={linkJobId} onChange={e=>setLinkJobId(e.target.value)}>
-              <option value="">اختر ملفاً من أوامر الطباعة</option>{jobs.map(j=><option key={j.id} value={j.id}>{j.filename} — {j.printer}</option>)}</select>
-            <button className={btn} disabled={busy||!linkJobId} onClick={()=>action(async()=>{
-              await request('/api/management/intake/requests/'+encodeURIComponent(current.id)+'/link-job','POST',{jobId:linkJobId});
-              onRefreshJobs();
-            },'تم ربط الطلب بملف الإنتاج')}><Printer size={16}/> ربط أمر الطباعة</button>
-            {matchingJob&&<p className="text-emerald-300 text-xs flex gap-1 items-center"><CheckCircle2 size={14}/>{matchingJob.filename} — {matchingJob.status==='done'?'مطبوع':'قيد الانتظار'}</p>}
-            {current.linkedJobId&&!matchingJob&&<p className="text-amber-300 text-xs">ملف الإنتاج غير ظاهر ضمن تاريخ أو قسم العمل الحالي. يبقى ارتباط الطلب محفوظاً.</p>}
+          <div className="border-t border-slate-700 pt-3 space-y-3">
+            <h4 className="font-bold flex gap-2 items-center"><Link2 size={16}/> ملفات الطباعة المرتبطة ({activeLinks.length})</h4>
+            <p className="text-xs text-slate-400">يمكن ربط عدة ملفات بطلب واحد. تبقى الأسماء القديمة محفوظة حتى لو تغيّرت أو اختفت من مجلد الطابعة.</p>
+
+            <div className="space-y-2">
+              {activeLinks.length===0&&<p className="rounded-xl border border-dashed border-slate-600 p-4 text-center text-xs text-slate-400">لم تُربط ملفات إنتاج بهذا الطلب بعد.</p>}
+              {activeLinks.map((link:LinkedProductionFile)=>{
+                const job=jobs.find(j=>j.id===link.jobId);
+                const available=!!job;
+                return <div key={link.id} className="rounded-xl border border-slate-700 bg-slate-950/40 p-3 space-y-2">
+                  <div className="flex flex-wrap justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm break-all">{job?.filename||link.filename||link.jobId}</p>
+                      <p className="text-xs text-slate-400 mt-1">الطابعة: {job?.printer||link.printer||'غير محددة'}</p>
+                      <p className={'text-xs mt-1 '+(available?'text-emerald-300':'text-amber-300')}>
+                        {available?(job.status==='done'?'تمت الطباعة':'ظاهر في الإنتاج / قيد الطباعة')
+                          :'غير ظاهر حالياً — ربما تغيّر اسمه أو تاريخ مجلده؛ اختر الملف الجديد عبر «تعديل»'}
+                      </p>
+                      {link.note&&<p className="mt-1 text-xs text-slate-300">ملاحظة: {link.note}</p>}
+                      {!!link.previousFiles?.length&&<details className="text-xs mt-2 text-slate-400">
+                        <summary className="cursor-pointer">تاريخ استبدال الملف ({link.previousFiles.length})</summary>
+                        {link.previousFiles.map((p,i)=><p key={i} className="mt-1 break-all">• {p.filename} — {p.printer||'غير محددة'}</p>)}
+                      </details>}
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <button type="button" className={btn+' text-xs'} disabled={busy} onClick={()=>{
+                        setEditingLinkId(link.id);setReplacementJobId('');setLinkNote(link.note||'');
+                      }}>تعديل</button>
+                      <button type="button" className={btn+' text-xs !border-rose-800 !text-rose-300'} disabled={busy} onClick={()=>{
+                        if(window.confirm('إلغاء ربط الملف بالطلب؟ لن يُحذف ملف التصميم أو ملف الطباعة من الجهاز.')){
+                          action(async()=>{
+                            await request('/api/management/intake/requests/'+encodeURIComponent(current.id)+'/files/'+encodeURIComponent(link.id),'DELETE');
+                            setEditingLinkId('');
+                            onRefreshJobs();
+                          },'تم حذف الربط فقط دون حذف الملف من جهاز الطابعة');
+                        }
+                      }}>حذف الربط</button>
+                    </div>
+                  </div>
+                  {editingLinkId===link.id&&<div className="space-y-2 rounded-xl border border-blue-700/50 bg-blue-950/20 p-3">
+                    <p className="text-xs text-blue-200 font-bold">تعديل الربط / اختيار الملف بعد تغيير اسمه</p>
+                    <select className={control} value={replacementJobId} onChange={e=>setReplacementJobId(e.target.value)}>
+                      <option value="">الإبقاء على الملف الحالي (تعديل الملاحظة فقط)</option>
+                      {jobs.filter(j=>j.id===link.jobId||!activeLinks.some(l=>l.jobId===j.id)).map(j=>
+                        <option key={j.id} value={j.id}>{j.filename} — {j.printer}</option>)}
+                    </select>
+                    <input className={control} value={linkNote} placeholder="ملاحظة خاصة بهذا الملف (اختياري)" maxLength={500} onChange={e=>setLinkNote(e.target.value)}/>
+                    <div className="flex gap-2 flex-wrap">
+                      <button disabled={busy} className={primary} onClick={()=>action(async()=>{
+                        await request('/api/management/intake/requests/'+encodeURIComponent(current.id)+'/files/'+encodeURIComponent(link.id),'PUT',{
+                          jobId:replacementJobId||link.jobId,note:linkNote
+                        });
+                        setEditingLinkId('');setReplacementJobId('');onRefreshJobs();
+                      },'تم تحديث الملف المرتبط وحفظ اسم الملف السابق')}>حفظ التعديل</button>
+                      <button type="button" className={btn} onClick={()=>setEditingLinkId('')}>إلغاء</button>
+                    </div>
+                  </div>}
+                </div>;
+              })}
+            </div>
+
+            <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-3 space-y-2">
+              <h5 className="font-bold text-sm">إضافة ملفات أخرى إلى الطلب</h5>
+              <p className="text-xs text-slate-400">حدد أكثر من ملف دفعة واحدة. كل ملف سيحتفظ باسمه ومعرفه وقت الربط.</p>
+              <input className={control} value={fileSearch} onChange={e=>setFileSearch(e.target.value)} placeholder="ابحث عن اسم ملف أو طابعة" aria-label="البحث عن ملفات الطباعة"/>
+              <div className="max-h-52 overflow-y-auto rounded-lg border border-slate-700 p-1 space-y-1">
+                {selectableJobs.length===0&&<p className="text-xs text-slate-400 p-3">لا توجد ملفات مطابقة في تاريخ الإنتاج الحالي.</p>}
+                {selectableJobs.map(j=>{
+                  const linked=activeLinks.some(l=>l.jobId===j.id);
+                  const otherCustomer=!!j.customerId&&j.customerId!==current.customerId;
+                  return <label key={j.id} className={'flex gap-3 items-center text-sm rounded-lg p-2 '+(linked||otherCustomer?'opacity-50':'hover:bg-slate-800 cursor-pointer')}>
+                    <input type="checkbox" className="accent-blue-500 w-4 h-4" disabled={linked||otherCustomer||busy} checked={linked||linkSelection.includes(j.id)}
+                      onChange={e=>setLinkSelection(prev=>e.target.checked?[...prev,j.id]:prev.filter(x=>x!==j.id))}/>
+                    <span className="flex-1 break-all">{j.filename}<small className="block text-slate-400">{j.printer}{otherCustomer?' — مرتبط بعميل آخر':linked?' — مرتبط مسبقاً':''}</small></span>
+                  </label>;
+                })}
+              </div>
+              <button className={primary+' w-full'} disabled={busy||linkSelection.length===0} onClick={()=>action(async()=>{
+                await request('/api/management/intake/requests/'+encodeURIComponent(current.id)+'/files','POST',{jobIds:linkSelection});
+                setLinkSelection([]);onRefreshJobs();
+              },'تم ربط '+linkSelection.length+' ملفات بالطلب')}>
+                <Plus size={15}/> ربط الملفات المحددة ({linkSelection.length})
+              </button>
+            </div>
           </div>
         </>:<><h3 className="font-bold">إنشاء طلب يدوي</h3><label className="block text-xs text-slate-400">اختر العميل
           <select className={control+' mt-1'} value={newOrder.customerId} onChange={e=>setNewOrder(s=>({...s,customerId:e.target.value,sourceMessageId:''}))}><option value="">اختر العميل</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
