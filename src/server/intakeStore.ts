@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import {getLinkedFiles,type LinkedProductionFile} from './intakeLinks';
+import {getLinkedFiles,type LinkedProductionFile} from './intakeLinks.ts';
 
 export type IncomingMessage = {
   id: string; customerId: string; from: string; name: string;
