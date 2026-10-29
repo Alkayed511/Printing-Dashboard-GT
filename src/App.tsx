@@ -44,7 +44,7 @@ export default function App() {
     }
     return (localStorage.getItem('myDepartment') as string | 'all') || null;
   });
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('home');
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(isDisplayMode ? 'kanban' : 'home');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
