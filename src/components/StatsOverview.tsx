@@ -87,7 +87,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ jobs, config }) =>
   }).filter(d => d.value > 0);
 
   return (
-    <div className="space-y-6 pb-6">
+    <div className="gt-stats-page space-y-6 pb-6">
       
       {/* Daily Summary Header */}
       <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">

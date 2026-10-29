@@ -39,8 +39,8 @@ import { playNotificationSound } from '../utils/audio';
 
 interface NavbarProps {
   config: ServerConfig;
-  activeTab: 'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers';
-  setActiveTab: (tab: 'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers') => void;
+  activeTab: 'home' | 'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers';
+  setActiveTab: (tab: 'home' | 'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers') => void;
   onOpenExport: () => void;
   onRefresh: () => void;
   onChangeDate: (newDate: string) => void;

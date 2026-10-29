@@ -29,7 +29,7 @@ export const JobCard: React.FC<JobCardProps> = ({
 
   return (
     <div
-      className={`group relative p-2.5 rounded-lg border transition-all ${
+      className={`gt-job-card group relative p-2.5 rounded-lg border transition-all ${
         isDone
           ? 'bg-zinc-900/90 border-emerald-900/40 hover:border-emerald-700/50 opacity-80'
           : 'bg-zinc-900/90 border-zinc-800 hover:border-zinc-700'

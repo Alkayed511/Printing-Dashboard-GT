@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ManagementWorkspace from './components/ManagementWorkspace';
+import ModernWorkspaceShell, { type WorkspaceTab } from './components/ModernWorkspaceShell';
+import WorkspaceOverview from './components/WorkspaceOverview';
 import { PrintJob, PrinterType, FileStatus, ServerConfig } from './types';
 import { translations } from './translations';
 import { Navbar } from './components/Navbar';
@@ -42,7 +44,7 @@ export default function App() {
     }
     return (localStorage.getItem('myDepartment') as string | 'all') || null;
   });
-  const [activeTab, setActiveTab] = useState<'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers'>('kanban');
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('home');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -307,9 +309,21 @@ export default function App() {
           }} 
         />
       ) : (
-      <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-secondary-500 selection:text-white ${config.language === 'en' ? 'dir-ltr text-left' : 'dir-rtl text-right'} select-none`}>
+      <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col gt-app selection:bg-secondary-500 selection:text-white ${config.language === 'en' ? 'dir-ltr text-left' : 'dir-rtl text-right'} ${isDisplayMode ? 'select-none' : ''}`}>
       <DisplayVoiceAnnouncer myDepartment={myDepartment} language={config.language || 'ar'} />
-      {!isDisplayMode && <Navbar
+      <ModernWorkspaceShell
+        enabled={!isDisplayMode}
+        activeTab={activeTab}
+        onNavigate={setActiveTab}
+        config={config}
+        jobs={visibleJobs}
+        pendingAlerts={unacknowledgedJobs.length}
+        isRefreshing={isRefreshing}
+        onRefresh={fetchFiles}
+        onExport={() => setIsExportOpen(true)}
+        onChangeDepartment={() => { setMyDepartment(null); localStorage.removeItem('myDepartment'); }}
+        myDepartment={myDepartment}
+        advancedTools={!isDisplayMode ? <Navbar
         config={config}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -333,7 +347,7 @@ export default function App() {
           setMyDepartment(null);
           localStorage.removeItem('myDepartment');
         }}
-      />}
+      /> : null}>
 
       {unacknowledgedJobs.length > 0 && (
         <div className={`fixed bottom-6 right-6 ${getBannerColorClass()} text-white px-6 py-4 rounded-xl shadow-2xl z-50 transition-all transform animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center justify-between gap-6 border border-white/10`}>
@@ -353,7 +367,12 @@ export default function App() {
         </div>
       )}
 
-      <main className={`flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0 ${isDisplayMode && config.disableMouseInDisplayMode ? 'pointer-events-none' : ''}`}>
+      <main className={`gt-main-content flex-1 w-full px-2 sm:px-3 py-2 overflow-hidden flex flex-col min-h-0 ${isDisplayMode && config.disableMouseInDisplayMode ? 'pointer-events-none' : ''}`}>
+        {activeTab === 'home' && (
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+            <WorkspaceOverview jobs={visibleJobs} config={config} onNavigate={setActiveTab} onSelectJob={(job) => handleSelectJob(job)} />
+          </div>
+        )}
         {activeTab === 'kanban' && (
           <KanbanBoard
             config={config}
@@ -391,6 +410,7 @@ export default function App() {
           </div>
         )}
       </main>
+      </ModernWorkspaceShell>
 
       {isExportOpen && (
         <ExportReportModal
