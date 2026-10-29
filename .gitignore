@@ -6,3 +6,11 @@ coverage/
 *.log
 .env*
 !.env.example
+
+!.env.management.example
+# Local SQLite database, journal and private exports
+.data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+uploads/

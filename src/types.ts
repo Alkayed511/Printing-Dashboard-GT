@@ -27,6 +27,7 @@ export interface PrintJob {
   material?: string;
   quantity?: number;
   customerName?: string;
+  customerId?: string;
   notes?: string;
   previewColor?: string;
   priority?: JobPriority;

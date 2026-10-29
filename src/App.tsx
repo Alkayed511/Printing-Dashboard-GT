@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ManagementWorkspace from './components/ManagementWorkspace';
 import { PrintJob, PrinterType, FileStatus, ServerConfig } from './types';
 import { translations } from './translations';
 import { Navbar } from './components/Navbar';
@@ -41,7 +42,7 @@ export default function App() {
     }
     return (localStorage.getItem('myDepartment') as string | 'all') || null;
   });
-  const [activeTab, setActiveTab] = useState<'kanban' | 'stats' | 'settings' | 'management'>('kanban');
+  const [activeTab, setActiveTab] = useState<'kanban' | 'stats' | 'settings' | 'management' | 'calculator' | 'customers'>('kanban');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState<PrintJob | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -83,7 +84,7 @@ export default function App() {
   useEffect(() => {
     if (selectedJobDetails) {
       const freshJob = jobs.find(j => j.id === selectedJobDetails.id);
-      if (freshJob && (freshJob.status !== selectedJobDetails.status || freshJob.quantity !== selectedJobDetails.quantity || freshJob.notes !== selectedJobDetails.notes)) {
+      if (freshJob && (freshJob.status !== selectedJobDetails.status || freshJob.quantity !== selectedJobDetails.quantity || freshJob.notes !== selectedJobDetails.notes || freshJob.customerId !== selectedJobDetails.customerId || freshJob.customerName !== selectedJobDetails.customerName)) {
         setSelectedJobDetails(freshJob);
       }
     }
@@ -372,6 +373,12 @@ export default function App() {
           </div>
         )}
 
+        {(activeTab === 'calculator' || activeTab === 'customers') && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ManagementWorkspace tab={activeTab} config={config} jobs={jobs} onRefreshJobs={fetchFiles} />
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <SettingsTab config={config} onSaveConfig={handleSaveConfig} />
@@ -396,6 +403,7 @@ export default function App() {
         onClose={() => handleSelectJob(null)}
         onMoveJob={handleMoveJob}
         onUpdateJob={handleUpdateJob}
+        onRefreshJobs={fetchFiles}
         basePath={config.basePath}
         currentDate={config.currentDate}
       />
