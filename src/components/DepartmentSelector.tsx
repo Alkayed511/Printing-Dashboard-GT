@@ -12,7 +12,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({ onSelect
   const departments = config.departments || [];
   
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
+    <div className="gt-department-screen min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
       <div className="max-w-3xl w-full space-y-8">
         
         <div className="text-center space-y-4">
@@ -33,7 +33,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({ onSelect
           {/* Admin / All Departments Option */}
           <button
             onClick={() => onSelect('all')}
-            className="group relative bg-zinc-900 border border-zinc-800 hover:border-emerald-500 rounded-2xl p-6 text-center transition-all hover:bg-zinc-800/80 hover:-translate-y-1 overflow-hidden"
+            className="gt-department-card group relative bg-zinc-900 border border-zinc-800 hover:border-emerald-500 rounded-2xl p-6 text-center transition-all hover:bg-zinc-800/80 hover:-translate-y-1 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/5 group-hover:opacity-100 opacity-0 transition-opacity" />
             <div className="mx-auto w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">

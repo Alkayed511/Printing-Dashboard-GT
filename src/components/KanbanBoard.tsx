@@ -96,10 +96,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex-1 w-full flex flex-col overflow-y-auto sm:overflow-hidden min-h-0 gap-2 pb-6 sm:pb-0">
+      <div className="gt-kanban-board flex-1 w-full flex flex-col overflow-y-auto sm:overflow-hidden min-h-0 gap-2 pb-6 sm:pb-0">
       
       {/* Search & High Density Filter Header */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-2.5 shrink-0">
+      <div className="gt-kanban-filters bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-2.5 shrink-0">
         
         {/* Search Input */}
         <div className="relative flex-1 w-full">
@@ -159,7 +159,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       </div>
 
       {/* High Density Grid Layout - 4 columns x 2 rows, flex full height */}
-      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 overflow-y-auto sm:overflow-hidden min-h-0">
+      <div className="gt-kanban-grid flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 overflow-y-auto sm:overflow-hidden min-h-0">
         
         {/* Productivity Analytics Card */}
         <div className="bg-primary-950/20 rounded-lg border border-primary-500/30 flex flex-col p-3 justify-between items-center gap-2 relative shadow-sm h-full min-h-0 overflow-hidden">
@@ -215,7 +215,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           return (
             <div 
               key={printer.id}
-              className="bg-zinc-900 rounded-lg border border-zinc-800 flex flex-col overflow-hidden shadow-sm hover:border-zinc-700 transition-colors h-full min-h-0"
+              className="gt-printer-column bg-zinc-900 rounded-lg border border-zinc-800 flex flex-col overflow-hidden shadow-sm hover:border-zinc-700 transition-colors h-full min-h-0"
             >
               {/* Card Header */}
               <div className="bg-zinc-800 px-3 py-1.5 border-b border-zinc-700 flex justify-between items-center shrink-0">
