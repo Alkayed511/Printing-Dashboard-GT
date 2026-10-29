@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import { Activity, ArrowUpLeft, BarChart3, Calculator, CheckCheck, Clock3, FileClock, Printer, UsersRound } from 'lucide-react';
+import { Activity, ArrowUpLeft, BarChart3, MessageCircle, CheckCheck, Clock3, FileClock, Printer, UsersRound } from 'lucide-react';
 import type {PrintJob, ServerConfig} from '../types';
 import type {WorkspaceTab} from './ModernWorkspaceShell';
 
@@ -33,9 +33,9 @@ export default function WorkspaceOverview({jobs,config,onNavigate,onSelectJob}:P
       <div className="gt-hero-copy">
         <span className="gt-hero-eyebrow"><Activity size={14}/>{tx('ملخّص يوم العمل','YOUR DAILY WORKSPACE')}</span>
         <h2>{tx('كل أعمال المطبعة، أمامك بوضوح.','Your print shop, all in one place.')}</h2>
-        <p>{tx('ابدأ تسعيرة جديدة، تابع الإنتاج، أو افتح ملف أي عميل دون البحث بين الشاشات.','Create quotes, follow production and open customer accounts without jumping between screens.')}</p>
+        <p>{tx('استقبل التصاميم، تابع الإنتاج، أو افتح ملف أي عميل دون البحث بين الشاشات.','Receive designs, follow production and open customer accounts without jumping between screens.')}</p>
         <div className="gt-hero-actions">
-          <button className="gt-hero-primary" onClick={()=>onNavigate('calculator')}><Calculator size={17}/>{tx('حساب طباعة جديد','New print calculation')}<ArrowUpLeft size={15}/></button>
+          <button className="gt-hero-primary" onClick={()=>onNavigate('intake')}><MessageCircle size={17}/>{tx('استلام طلب تصميم','New design request')}<ArrowUpLeft size={15}/></button>
           <button className="gt-hero-secondary" onClick={()=>onNavigate('customers')}><UsersRound size={17}/>{tx('إدارة العملاء','Manage customers')}</button>
         </div>
       </div>
