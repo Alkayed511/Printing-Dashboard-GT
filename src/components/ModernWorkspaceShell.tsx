@@ -3,7 +3,7 @@ import {
   LayoutDashboard, KanbanSquare, Calculator, UsersRound, BarChart3, Radio,
   Settings2, Printer, Menu, X, ChevronLeft, ChevronRight, RefreshCcw,
   Download, SlidersHorizontal, BellRing, CircleCheck, Clock3, Layers3,
-  Sparkles, ArrowUpLeft, Monitor
+  Sparkles, ArrowUpLeft, Monitor, type LucideIcon
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ServerConfig, PrintJob } from '../types';
@@ -25,7 +25,8 @@ type Props = {
   children: ReactNode;
 };
 
-const sections = [
+type NavGroup = { key: string; ar: string; en: string; items: Array<{tab:WorkspaceTab;ar:string;en:string;icon:LucideIcon}> };
+const sections: NavGroup[] = [
   {key: 'main', ar:'مساحة العمل', en:'WORKSPACE', items:[
     {tab:'home', ar:'الرئيسية', en:'Overview', icon:LayoutDashboard},
     {tab:'kanban', ar:'الإنتاج والطباعة', en:'Production', icon:KanbanSquare},
@@ -37,7 +38,7 @@ const sections = [
     {tab:'management', ar:'إدارة البث الصوتي', en:'Voice management', icon:Radio},
     {tab:'settings', ar:'الإعدادات', en:'Settings', icon:Settings2}
   ]}
-] as const;
+];
 
 const hints: Record<WorkspaceTab, {ar:string;en:string}> = {
   home:{ar:'كل ما تحتاجه لإدارة يوم العمل من مكان واحد',en:'Your print shop at a glance'},
