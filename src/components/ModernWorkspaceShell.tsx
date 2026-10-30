@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard, KanbanSquare, UsersRound, BarChart3, Radio, MessageCircle,
+  LayoutDashboard, KanbanSquare, UsersRound, BarChart3, Radio, MessageCircle, ClipboardList,
   Settings2, Printer, Menu, X, ChevronLeft, ChevronRight, RefreshCcw,
   Download, SlidersHorizontal, BellRing, CircleCheck, Clock3, Layers3,
   Sparkles, ArrowUpLeft, Monitor, type LucideIcon
@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from 'react';
 import type { ServerConfig, PrintJob } from '../types';
 
-export type WorkspaceTab = 'home' | 'kanban' | 'customers' | 'intake' | 'stats' | 'management' | 'settings';
+export type WorkspaceTab = 'home' | 'kanban' | 'customers' | 'intake' | 'ledger' | 'stats' | 'management' | 'settings';
 type Props = {
   enabled: boolean;
   activeTab: WorkspaceTab;
@@ -32,6 +32,7 @@ const sections: NavGroup[] = [
     {tab:'kanban', ar:'الإنتاج والطباعة', en:'Production', icon:KanbanSquare},
     {tab:'customers', ar:'العملاء والحسابات', en:'Customers & accounts', icon:UsersRound},
     {tab:'intake', ar:'واتساب واستلام التصاميم', en:'WhatsApp & intake', icon:MessageCircle},
+    {tab:'ledger', ar:'سجل ملفات الطباعة', en:'Print file ledger', icon:ClipboardList},
     {tab:'stats', ar:'التقارير والإحصائيات', en:'Reports & analytics', icon:BarChart3}
   ]},
   {key:'system', ar:'النظام', en:'SYSTEM', items:[
@@ -45,6 +46,7 @@ const hints: Record<WorkspaceTab, {ar:string;en:string}> = {
   kanban:{ar:'تابع المهام والطابعات وحالة الطلبات مباشرة',en:'Track jobs, printers and order status'},
   customers:{ar:'العملاء والفواتير والدفعات في مكان واحد',en:'Customers, invoices and collections'},
   intake:{ar:'استقبل طلبات العملاء ووثّق التعديلات واربط الملف النهائي بالطابعة',en:'Receive designs, track revisions and link production files'},
+  ledger:{ar:'تابع ملفات done، الكميات، الأسعار والذمم',en:'Track done files, quantities, prices and balances'},
   stats:{ar:'تعرّف على حجم العمل وأداء الإنتاج',en:'Understand production performance'},
   management:{ar:'التواصل الصوتي بين أقسام المطبعة',en:'Voice communication between departments'},
   settings:{ar:'خصّص المسارات والطابعات وإعدادات النظام',en:'Customize paths, printers and preferences'}

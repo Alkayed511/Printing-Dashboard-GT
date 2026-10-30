@@ -27,6 +27,13 @@ type Store = { version: number; customers: CRMCustomer[]; estimates: Estimate[];
 const initial = (): Store => ({ version: 1, customers: [], estimates: [], quotes: [],
   invoices: [], payments: [], materials: [], orders: [], jobLinks: {} });
 const now = () => new Date().toISOString();
+const nameKey=(x:unknown)=>String(x||'').normalize('NFKC').replace(/[\u064B-\u065F\u0670]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+function phoneMatches(phone:string){
+  const normalized=normalizeWhatsApp(phone);
+  if(!normalized)return [];
+  return readDb().customers.filter(c=>!c.archived&&(normalizeWhatsApp(c.phone)===normalized||normalizeWhatsApp(c.whatsapp)===normalized));
+}
+
 const uid = () => randomUUID();
 const str = (x: unknown, max = 200) => typeof x === 'string' ? x.trim().slice(0,max) : '';
 const nonnegative = (x: unknown, max = 1_000_000) => {
@@ -87,7 +94,7 @@ export function resolveWhatsappCustomer(phoneInput:string, profileName:string):s
   const phone=normalizeWhatsApp(phoneInput);
   if(!phone) throw new Error('Invalid WhatsApp sender');
   const store=readDb();
-  const matches=store.customers.filter(c=>!c.archived && (normalizeWhatsApp(c.whatsapp)===phone || normalizeWhatsApp(c.phone)===phone));
+  const matches=phoneMatches(phone);
   // Never silently merge duplicate customer records that share a phone.
   if(matches.length>1)return '';
   if(matches.length===1){
@@ -95,6 +102,8 @@ export function resolveWhatsappCustomer(phoneInput:string, profileName:string):s
     if(!item.whatsapp){item.whatsapp='+'+phone;item.updatedAt=now();saveDb();}
     return item.id;
   }
+  // A matching name with a different/missing phone is ambiguous: require human review.
+  if(profileName&&store.customers.some(c=>!c.archived&&nameKey(c.name)===nameKey(profileName)))return '';
   const newCustomer:CRMCustomer={
     id:uid(),name:str(profileName)||('واتساب +' + phone),
     contact:'',phone:'',whatsapp:'+'+phone,email:'',address:'',
@@ -140,10 +149,44 @@ export function attachManagementRoutes(app: Express) {
     res.set('Cache-Control','no-store');
     res.json({...data, invoices:data.invoices.map(i=>({...i,balance:invoiceBalance(i.id)}))});
   });
+  // Import phonebook CSV rows exported from the user's own device. Not a WhatsApp address-book API.
+  router.post('/customers/contacts/import',(req,res)=>{
+    try{
+      const entries=req.body?.contacts;
+      if(!Array.isArray(entries)||entries.length<1||entries.length>500)throw Error('ارفع من 1 إلى 500 جهة اتصال في كل دفعة');
+      const results:Array<{name:string;phone:string;result:string;customerId?:string}>=[];
+      for(const raw of entries){
+        const name=str(raw?.name,200);
+        const phone=normalizeWhatsApp(raw?.phone);
+        if(!name||!phone){results.push({name,phone,result:'بيانات ناقصة'});continue;}
+        const matches=phoneMatches(phone);
+        if(matches.length>1){results.push({name,phone,result:'تكرار الرقم في عدة سجلات - راجع يدوياً'});continue;}
+        if(matches.length===1){
+          const c=matches[0];
+          if(!c.whatsapp){c.whatsapp='+'+phone;c.updatedAt=now();}
+          results.push({name,phone,result:'موجود حسب الرقم',customerId:c.id});
+          continue;
+        }
+        const nameCandidates=readDb().customers.filter(c=>!c.archived&&nameKey(c.name)===nameKey(name));
+        if(nameCandidates.length){
+          results.push({name,phone,result:'الاسم موجود برقم مختلف - راجع يدوياً'});continue;
+        }
+        const c:CRMCustomer={id:uid(),name,phone:'',whatsapp:'+'+phone,contact:'',email:'',address:'',
+          taxNumber:'',category:'جهات اتصال مستوردة',paymentTerms:'',creditLimit:0,notes:'',
+          archived:false,createdAt:now(),updatedAt:now()};
+        readDb().customers.push(c);
+        results.push({name,phone,result:'تمت الإضافة',customerId:c.id});
+      }
+      saveDb();
+      res.json({results});
+    }catch(e){handleError(res,e);}
+  });
   router.post('/customers',(req,res)=>{
     try {
       const name = str(req.body.name);
       if (!name) throw new Error('اسم العميل مطلوب');
+      const phone=str(req.body.whatsapp||req.body.phone,80);
+      if(phone&&phoneMatches(phone).length)throw new Error('هذا الرقم مسجل مسبقاً. اختر العميل الموجود أو عدّل بياناته');
       const customer: CRMCustomer = { id:uid(), name, contact:str(req.body.contact), phone:str(req.body.phone,80),
         whatsapp:str(req.body.whatsapp,80), email:str(req.body.email), address:str(req.body.address,400),
         taxNumber:str(req.body.taxNumber,100), category:str(req.body.category), paymentTerms:str(req.body.paymentTerms),
@@ -282,6 +325,7 @@ export function attachManagementRoutes(app: Express) {
     authenticated,
     guard,
     linkJob,
+    hasCustomer:validCustomerId,
     getOrders: (req:Request) => authenticated(req) ? readDb().orders : [],
     decorate: (job:PrintJob):PrintJob => {
       const id=readDb().jobLinks[job.id];
