@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
+import {listLedger,reconcileLedger,updateLedgerRow} from './src/server/productionLedger';
 import { attachManagementRoutes, resolveWhatsappCustomer } from './src/server/management';
 import { mountWhatsAppWebhook, mountIntakeRoutes } from './src/server/whatsapp';
 import { readServerSettings, writeServerSettings, readLocalState, writeLocalState } from './src/server/sqliteStore';
@@ -229,6 +230,7 @@ function scanDateDirectory(dateDir: string): PrintJob[] {
             const stats = fs.statSync(filePath);
             realJobs.push({
               id: getOrderId(path.basename(dateDir), printer, entry.name),
+              fileSignature: createHash('sha256').update(JSON.stringify([path.resolve(dateDir),printer,stats.birthtimeMs,stats.size])).digest('hex'),
               filename: entry.name,
               printer: printer as PrinterType,
               status: 'pending',
@@ -252,6 +254,7 @@ function scanDateDirectory(dateDir: string): PrintJob[] {
             const stats = fs.statSync(filePath);
             realJobs.push({
               id: getOrderId(path.basename(dateDir), printer, entry.name),
+              fileSignature: createHash('sha256').update(JSON.stringify([path.resolve(dateDir),printer,stats.birthtimeMs,stats.size])).digest('hex'),
               filename: entry.name,
               printer: printer as PrinterType,
               status: 'done',
@@ -552,6 +555,41 @@ app.post('/api/config', async (req: Request, res: Response) => {
   res.json({ success: true, config: { ...serverConfig, localIp: getLocalIp() } });
 });
 
+function observeScannedProduction(day:string,jobs:PrintJob[]){
+  // Only real disk files; never fabricate print history from demo data.
+  const unique=new Map(jobs.map(j=>[j.id,j]));
+  reconcileLedger([...unique.values()].map(j=>({
+    jobId:j.id,filename:j.filename,printer:j.printer,dateFolder:day,status:j.status,
+    signature:j.fileSignature||'',createdAt:j.createdAt,customerId:j.customerId,
+    dimensions:j.dimensions==='مواصفات قياسية'?'':j.dimensions,
+    material:j.material==='حسب الطلب'?'':j.material,
+    quantity:/(\d+)\s*(?:قطعة|قطع|pcs|copies)/i.test(j.filename)?j.quantity:null
+  })));
+}
+const withBalance=(r:ReturnType<typeof listLedger>[number])=>({
+  ...r,balanceJod:r.priceJod===null?null:Math.round((r.priceJod-(r.paidJod||0))*1000)/1000
+});
+app.get('/api/management/ledger',(_req:Request,res:Response)=>{
+  try{
+    const day=serverConfig.currentDate;
+    if(checkDiskStorage(serverConfig.basePath,day))
+      observeScannedProduction(day,scanDateDirectory(path.join(serverConfig.basePath,day)).map(j=>management.decorate(j)));
+    res.set('Cache-Control','no-store');
+    res.json({rows:listLedger().map(withBalance)});
+  }catch(error){res.status(500).json({error:error instanceof Error?error.message:'تعذّر قراءة سجل الطباعة'});}
+});
+app.patch('/api/management/ledger/:id',(req:Request,res:Response)=>{
+  try{
+    const patch=req.body||{};
+    if(patch.customerId&&!management.hasCustomer(String(patch.customerId))){
+      res.status(400).json({error:'العميل غير موجود'});return;
+    }
+    const row=updateLedgerRow(req.params.id,patch);
+    if(Object.prototype.hasOwnProperty.call(patch,'customerId'))management.linkJob(row.jobId,row.customerId);
+    res.json(withBalance(row));
+  }catch(error){res.status(400).json({error:error instanceof Error?error.message:'تعذّر تعديل سجل الطباعة'});}
+});
+
 // GET /api/files - List files for selected date
 app.get('/api/files', (req: Request, res: Response) => {
   const selectedDate = (req.query.date as string) || serverConfig.currentDate;
@@ -560,6 +598,7 @@ app.get('/api/files', (req: Request, res: Response) => {
     const dateDir = path.join(serverConfig.basePath, selectedDate);
     const realJobs = scanDateDirectory(dateDir);
     const jobsWithOverrides = realJobs.map(j => management.decorate({ ...j, ...(jobOverrides[j.id] || {}) }));
+    observeScannedProduction(selectedDate,jobsWithOverrides);
     res.json({ jobs: [...jobsWithOverrides, ...management.getOrders(req)], isRealStorage: true, scannedPath: dateDir });
 
   } else {

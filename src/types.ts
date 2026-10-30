@@ -28,6 +28,7 @@ export interface PrintJob {
   quantity?: number;
   customerName?: string;
   customerId?: string;
+  fileSignature?: string; // metadata key for reconciling renamed files in the print ledger
   notes?: string;
   previewColor?: string;
   priority?: JobPriority;
