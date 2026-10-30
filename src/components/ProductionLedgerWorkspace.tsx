@@ -2,16 +2,16 @@ import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import {RefreshCw,Search,Printer,CheckCircle2,Pencil,Save,Wallet,Users,Info} from 'lucide-react';
 import type {Customer,ManagementData} from '../types/management';
 type LedgerRow={
-  id:string;jobId:string;filename:string;previousNames:string[];printer:string;dateFolder:string;
+  id:string;jobId:string;filename:string;displayName?:string;previousNames:string[];printer:string;dateFolder:string;
   status:'pending'|'done';firstSeenAt:string;doneObservedAt:string|null;
   customerId:string;dimensions:string;material:string;quantity:number|null;quantitySource:'filename'|'manual'|'unknown';
   priceJod:number|null;paidJod:number|null;balanceJod:number|null;notes:string;
 };
-type Form={customerId:string;quantity:string;dimensions:string;material:string;priceJod:string;paidJod:string;notes:string};
+type Form={customerId:string;displayName:string;quantity:string;dimensions:string;material:string;priceJod:string;paidJod:string;notes:string};
 const input='w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500';
 const button='inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-blue-600 hover:bg-blue-500 font-semibold text-sm disabled:opacity-50';
 const formOf=(x:LedgerRow):Form=>({
-  customerId:x.customerId,quantity:x.quantity===null?'':String(x.quantity),
+  customerId:x.customerId,displayName:x.displayName||'',quantity:x.quantity===null?'':String(x.quantity),
   dimensions:x.dimensions,material:x.material,priceJod:x.priceJod===null?'':String(x.priceJod),
   paidJod:x.paidJod===null?'':String(x.paidJod),notes:x.notes
 });
@@ -42,7 +42,7 @@ export default function ProductionLedgerWorkspace(){
   useEffect(()=>{refresh().catch(e=>setError(String(e)));const timer=setInterval(()=>refresh().catch(()=>{}),15000);return()=>clearInterval(timer);},[refresh]);
   const customerName=(id:string)=>customers.find(c=>c.id===id)?.name||'لم يتم تحديد العميل';
   const filtered=useMemo(()=>rows.filter(r=>(filter==='all'||r.status===filter)&&
-    [r.filename,r.printer,r.dateFolder,customerName(r.customerId),...(r.previousNames||[])]
+    [r.filename,r.displayName||'',r.printer,r.dateFolder,customerName(r.customerId),...(r.previousNames||[])]
       .some(v=>v.toLowerCase().includes(search.toLowerCase().trim()))),[rows,filter,search,customers]);
   const current=rows.find(r=>r.id===selected);
   const printed=rows.filter(r=>r.status==='done');
@@ -84,7 +84,7 @@ export default function ProductionLedgerWorkspace(){
         {filtered.length===0?<p className="text-center text-sm p-8 text-slate-400">لا توجد ملفات مرصودة حالياً. تأكد من اتصال مجلدات الشبكة ثم اضغط تحديث.</p>:filtered.map(r=>
           <button type="button" key={r.id} className={'text-right w-full p-4 border-b border-slate-800 hover:bg-slate-800 '+(selected===r.id?'bg-slate-800':'')} onClick={()=>select(r)}>
             <div className="flex items-start justify-between gap-3"><div className="min-w-0">
-              <b className="break-all">{r.filename}</b><p className="text-slate-400 mt-1 text-xs">{customerName(r.customerId)} · {r.printer} · {r.dateFolder}</p>
+              <b className="break-all">{r.displayName||r.filename}</b><p className="text-slate-400 mt-1 text-xs">{customerName(r.customerId)} · {r.printer} · {r.dateFolder}</p>
               <p className="text-xs mt-1">العدد: {r.quantity??'غير معروف'} · المقاس: {r.dimensions||'غير معروف'} · السعر: {money(r.priceJod)}</p>
               {!!r.previousNames?.length&&<p className="text-xs text-blue-300 mt-1">الاسم السابق: {r.previousNames.join('، ')}</p>}
             </div><span className={'shrink-0 text-xs rounded-lg px-2 py-1 '+(r.status==='done'?'bg-emerald-950 text-emerald-200':'bg-amber-950 text-amber-200')}>
@@ -95,7 +95,10 @@ export default function ProductionLedgerWorkspace(){
       <div className="rounded-2xl bg-slate-900 border border-slate-700 p-4 space-y-3">
         {!current||!form?<div className="text-center text-slate-400 py-8"><Printer size={30} className="mx-auto mb-3"/>اختر ملفاً من القائمة لعرض تفاصيله وتعديلها.</div>:<>
           <div className="flex items-center gap-2 text-blue-300 font-bold"><Pencil size={18}/> تعديل بيانات ملف الطباعة</div>
-          <p className="text-sm break-all">{current.filename}</p>
+          <p className="text-sm break-all">الاسم الفعلي على الشبكة: {current.filename}</p>
+          <label className="block text-xs text-slate-400">اسم الملف في السجل (اختياري — لا يغيّر الاسم على الشبكة)
+            <input className={input+' mt-1'} value={form.displayName} onChange={e=>setForm({...form,displayName:e.target.value})} placeholder={current.filename}/>
+          </label>
           <label className="block text-xs text-slate-400">العميل
             <select className={input+' mt-1'} value={form.customerId} onChange={e=>setForm({...form,customerId:e.target.value})}>
               <option value="">غير مرتبط</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name} {c.whatsapp&&'— '+c.whatsapp}</option>)}

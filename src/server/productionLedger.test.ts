@@ -22,7 +22,8 @@ try{
   assert.equal(row.quantity,null,'Do not invent copies from filename with no count');
   assert.equal(reconcileLedger([printed],'2026-10-30T09:10:00Z'),0);
   assert.equal(listLedger().length,1);
-  const edited=updateLedgerRow(row.id,{quantity:3,priceJod:15.5,paidJod:5,notes:'Customer approved'});
+  const edited=updateLedgerRow(row.id,{quantity:3,priceJod:15.5,paidJod:5,displayName:'Customer banner',notes:'Customer approved'});
+  assert.equal(edited.displayName,'Customer banner');
   assert.equal(edited.quantity,3);assert.equal(edited.quantitySource,'manual');
   assert.equal(edited.priceJod,15.5);assert.equal(edited.paidJod,5);
   assert.throws(()=>updateLedgerRow(row.id,{paidJod:20}),/المدفوع/);

@@ -10,7 +10,7 @@ export type PrinterScan = {
   customerId?:string; dimensions?:string; material?:string; quantity?:number|null;
 };
 export type PrintLedgerRow = {
-  id:string; jobId:string; filename:string; previousNames:string[]; printer:string; dateFolder:string;
+  id:string; jobId:string; filename:string; displayName?:string; previousNames:string[]; printer:string; dateFolder:string;
   status:'pending'|'done'; firstSeenAt:string; doneObservedAt:string|null;
   signature:string; customerId:string; dimensions:string; material:string;
   quantity:number|null; quantitySource:'filename'|'manual'|'unknown';
@@ -69,7 +69,7 @@ export function reconcileLedger(scans:PrinterScan[], timestamp=new Date().toISOS
     const original=row?JSON.stringify(row):'';
     if(!row){
       const qty=scan.quantity!==null&&scan.quantity!==undefined&&Number.isInteger(scan.quantity)&&scan.quantity>0?scan.quantity:null;
-      row={id:randomUUID(),jobId:scan.jobId,filename:scan.filename,previousNames:[],printer:scan.printer,
+      row={id:randomUUID(),jobId:scan.jobId,filename:scan.filename,displayName:'',previousNames:[],printer:scan.printer,
         dateFolder:scan.dateFolder,status:scan.status,firstSeenAt:timestamp,
         doneObservedAt:scan.status==='done'?timestamp:null,signature:scan.signature,
         customerId:scan.customerId||'',dimensions:scan.dimensions||'',material:scan.material||'',
@@ -112,6 +112,7 @@ export function updateLedgerRow(id:string,patch:Record<string,unknown>):PrintLed
   const row=listLedger().find(x=>x.id===id);
   if(!row)throw Error('سجل الطباعة غير موجود');
   if(Object.prototype.hasOwnProperty.call(patch,'customerId'))row.customerId=String(patch.customerId||'').slice(0,150);
+  if(Object.prototype.hasOwnProperty.call(patch,'displayName'))row.displayName=String(patch.displayName||'').trim().slice(0,250);
   if(Object.prototype.hasOwnProperty.call(patch,'quantity')){
     if(patch.quantity===null||patch.quantity===''){row.quantity=null;row.quantitySource='unknown';}
     else {row.quantity=count(patch.quantity);row.quantitySource='manual';}
