@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import {isValidAdminPin,isValidSessionSecret} from './adminPin';
 import type { Express, Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
 import { readSnapshot, writeSnapshot } from './sqliteStore';
@@ -43,7 +44,7 @@ const nonnegative = (x: unknown, max = 1_000_000) => {
 };
 const authPass = process.env.PRINT_ADMIN_PASSWORD || '';
 const secret = process.env.PRINT_SESSION_SECRET || '';
-const configured = authPass.length >= 12 && secret.length >= 32;
+const configured = isValidAdminPin(authPass) && isValidSessionSecret(secret);
 let db: Store | null = null;
 function readDb(): Store {
   return db ||= { ...initial(), ...readSnapshot() } as Store;
@@ -131,9 +132,9 @@ export function attachManagementRoutes(app: Express) {
     const expected = Buffer.from(authPass);
     if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
       attempt.n++;
-      if (attempt.n >= 8) { attempt.n = 0; attempt.until = Date.now()+15*60_000; }
+      if (attempt.n >= 5) { attempt.n = 0; attempt.until = Date.now()+15*60_000; }
       attempts.set(ip,attempt);
-      res.status(401).json({error:'كلمة المرور غير صحيحة'}); return;
+      res.status(401).json({error:'رمز PIN غير صحيح'}); return;
     }
     attempts.delete(ip);
     const exp = String(Date.now() + 8*60*60_000);

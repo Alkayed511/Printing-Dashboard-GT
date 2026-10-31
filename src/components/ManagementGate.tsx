@@ -52,20 +52,20 @@ export default function ManagementGate({children}:{children:React.ReactNode}) {
           <div className="gt-auth-mobile-brand"><Printer size={21}/> Golden Target</div>
           <span className="gt-auth-greeting"><ShieldCheck size={17}/> مساحة عمل آمنة</span>
           <h2>{state==='unconfigured'?'إعداد الدخول مطلوب':'مرحباً بعودتك'}</h2>
-          <p className="gt-auth-subtitle">{state==='unconfigured'?'لم يكتمل إعداد بيانات الدخول بعد.':'أدخل كلمة مرور الإدارة للوصول إلى مساحة عمل المطبعة.'}</p>
+          <p className="gt-auth-subtitle">{state==='unconfigured'?'لم يكتمل إعداد بيانات الدخول بعد.':'أدخل رمز PIN المكوّن من 4 أرقام للدخول إلى المطبعة.'}</p>
 
           {state==='checking'? <div className="gt-auth-loading" role="status"><div className="gt-auth-spinner"/> جارٍ التحقق من جلسة الدخول...</div> :
             state==='unconfigured'?
-              <div className="gt-auth-warning" role="alert"><AlertCircle size={19}/><div><b>الإعدادات غير مكتملة</b><p>أنشئ ملف <code>.env</code> بجانب <code>package.json</code>، وأضف كلمة مرور المسؤول (12 حرفاً على الأقل) وسر جلسة عشوائياً (32 حرفاً على الأقل)، ثم أعد تشغيل الخادم.</p></div></div>:
+              <div className="gt-auth-warning" role="alert"><AlertCircle size={19}/><div><b>الإعدادات غير مكتملة</b><p>أنشئ ملف <code>.env</code> بجانب <code>package.json</code>، وأضف رمز PIN للمسؤول (4 أرقام بالضبط) وسر جلسة عشوائياً (32 حرفاً على الأقل)، ثم أعد تشغيل الخادم.</p></div></div>:
               <form onSubmit={login} className="gt-auth-form">
-                <label htmlFor="gt-password">كلمة مرور الإدارة</label>
+                <label htmlFor="gt-password">رمز PIN — أربعة أرقام</label>
                 <div className="gt-auth-password">
                   <LockKeyhole size={19}/>
-                  <input id="gt-password" required autoFocus type={showPassword?'text':'password'} autoComplete="current-password" value={password} placeholder="أدخل كلمة المرور" onChange={e=>setPassword(e.target.value)}/>
+                  <input id="gt-password" required autoFocus type={showPassword?'text':'password'} inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} autoComplete="off" dir="ltr" value={password} placeholder="0000" onChange={e=>setPassword(e.target.value.replace(/[^0-9]/g,'').slice(0,4))}/>
                   <button type="button" onClick={()=>setShowPassword(x=>!x)} aria-label={showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'}>{showPassword?<EyeOff size={20}/>:<Eye size={20}/>}</button>
                 </div>
                 {error&&<p role="alert" className="gt-auth-error">{error}</p>}
-                <button className="gt-auth-submit" type="submit" disabled={busy}>{busy?'جارٍ تسجيل الدخول...':'دخول إلى لوحة الإدارة'}<ArrowLeft size={19}/></button>
+                <button className="gt-auth-submit" type="submit" disabled={busy||password.length!==4}>{busy?'جارٍ تسجيل الدخول...':'دخول إلى لوحة الإدارة'}<ArrowLeft size={19}/></button>
               </form>
           }
           {state==='unconfigured'&&error&&<p role="alert" className="gt-auth-error">{error}</p>}
