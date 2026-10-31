@@ -23,7 +23,7 @@ export function appearanceVariables(branding: BrandingSettings, mode: 'light' | 
     '--app-canvas': light ? '#f3f5f9' : '#10141b', '--app-surface': light ? '#ffffff' : '#191f28',
     '--app-sidebar': light ? '#fcfdff' : '#141920', '--app-raised': light ? '#edf1f7' : '#242d3b',
     '--app-border': light ? '#d8e0eb' : '#354152', '--app-text': branding.textColor || (light ? '#24334a' : '#e9eff8'),
-    '--app-muted': light ? '#62728b' : '#98a8bf', '--app-accent': branding.accentColor,
+    '--app-muted': light ? '#5b6b83' : '#98a8bf', '--app-accent': branding.accentColor,
     '--app-on-accent': contrastRatio(branding.accentColor,'#ffffff') > contrastRatio(branding.accentColor,'#121821') ? '#ffffff' : '#121821',
     '--app-font': brandFonts[branding.fontFamily], '--app-font-scale': String(branding.fontSize/14),
     '--app-radius': branding.corners === 'sharp' ? '4px' : branding.corners === 'soft' ? '10px' : '17px',
