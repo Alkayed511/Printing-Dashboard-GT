@@ -14,7 +14,6 @@ import { ManagementTab } from './components/ManagementTab';
 import { JobDetailsModal } from './components/JobDetailsModal';
 import { ExportReportModal } from './components/ExportReportModal';
 import { DepartmentSelector } from './components/DepartmentSelector';
-import { DisplayVoiceAnnouncer } from './components/DisplayVoiceAnnouncer';
 import { playNotificationSound } from './utils/audio';
 
 // Safelist for dynamic themes: primary-orange primary-blue primary-green primary-purple primary-rose secondary-orange secondary-blue secondary-green secondary-purple secondary-rose
@@ -312,7 +311,6 @@ export default function App() {
         />
       ) : (
       <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col gt-app selection:bg-secondary-500 selection:text-white ${config.language === 'en' ? 'dir-ltr text-left' : 'dir-rtl text-right'} ${isDisplayMode ? 'select-none' : ''}`}>
-      <DisplayVoiceAnnouncer myDepartment={myDepartment} language={config.language || 'ar'} />
       <ModernWorkspaceShell
         enabled={!isDisplayMode}
         activeTab={activeTab}

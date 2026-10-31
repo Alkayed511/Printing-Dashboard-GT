@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard, KanbanSquare, UsersRound, BarChart3, Radio, MessageCircle, ClipboardList,
+  LayoutDashboard, KanbanSquare, UsersRound, BarChart3, MessageCircle, ClipboardList,
   Settings2, Printer, Menu, X, ChevronLeft, ChevronRight, RefreshCcw,
   Download, SlidersHorizontal, BellRing, CircleCheck, Clock3, Layers3,
   Sparkles, ArrowUpLeft, Monitor, type LucideIcon
@@ -36,7 +36,7 @@ const sections: NavGroup[] = [
     {tab:'stats', ar:'التقارير والإحصائيات', en:'Reports & analytics', icon:BarChart3}
   ]},
   {key:'system', ar:'النظام', en:'SYSTEM', items:[
-    {tab:'management', ar:'إدارة البث الصوتي', en:'Voice management', icon:Radio},
+    {tab:'management', ar:'الأقسام والطابعات', en:'Departments & printers', icon:Printer},
     {tab:'settings', ar:'الإعدادات', en:'Settings', icon:Settings2}
   ]}
 ];
@@ -48,7 +48,7 @@ const hints: Record<WorkspaceTab, {ar:string;en:string}> = {
   intake:{ar:'استقبل طلبات العملاء ووثّق التعديلات واربط الملف النهائي بالطابعة',en:'Receive designs, track revisions and link production files'},
   ledger:{ar:'تابع ملفات done، الكميات، الأسعار والذمم',en:'Track done files, quantities, prices and balances'},
   stats:{ar:'تعرّف على حجم العمل وأداء الإنتاج',en:'Understand production performance'},
-  management:{ar:'التواصل الصوتي بين أقسام المطبعة',en:'Voice communication between departments'},
+  management:{ar:'إدارة أقسام العمل والطابعات',en:'Manage departments and printer folders'},
   settings:{ar:'خصّص المسارات والطابعات وإعدادات النظام',en:'Customize paths, printers and preferences'}
 };
 
@@ -58,7 +58,6 @@ export default function ModernWorkspaceShell({
   advancedTools, children
 }: Props) {
   const [mobileOpen,setMobileOpen] = useState(false);
-  const [toolsOpen,setToolsOpen] = useState(false);
   const isAr = config.language !== 'en';
   const tx = (ar:string,en:string) => isAr ? ar : en;
   if (!enabled) return <>{children}</>;
@@ -72,7 +71,7 @@ export default function ModernWorkspaceShell({
     ? tx('كل الأقسام','All departments')
     : (config.departments||[]).find(d=>d.id===myDepartment)?.name || myDepartment || tx('اختر القسم','Select department');
 
-  const navigate = (tab:WorkspaceTab) => {onNavigate(tab);setMobileOpen(false);setToolsOpen(false);};
+  const navigate = (tab:WorkspaceTab) => {onNavigate(tab);setMobileOpen(false);};
 
   return (
     <div className="gt-shell" dir={isAr?'rtl':'ltr'}>
@@ -126,18 +125,9 @@ export default function ModernWorkspaceShell({
             <button type="button" className="gt-icon-button" onClick={onRefresh} disabled={isRefreshing} title={tx('تحديث البيانات','Refresh')} aria-label={tx('تحديث البيانات','Refresh')}>
               <RefreshCcw size={18} className={isRefreshing?'animate-spin':''}/></button>
             <button type="button" className="gt-icon-button gt-header-export" onClick={onExport} title={tx('تصدير تقرير','Export report')} aria-label={tx('تصدير تقرير','Export report')}><Download size={18}/></button>
-            <button type="button" className={'gt-icon-button gt-tools-toggle'+(toolsOpen?' gt-tools-active':'')} onClick={()=>setToolsOpen(v=>!v)} aria-expanded={toolsOpen} title={tx('أدوات إضافية وتنبيهات','Advanced tools & notifications')} aria-label={tx('أدوات إضافية وتنبيهات','Advanced tools & notifications')}>
-              {pendingAlerts>0?<BellRing size={18}/>:<SlidersHorizontal size={18}/>}
-              {pendingAlerts>0&&<span className="gt-alert-count">{pendingAlerts}</span>}
-            </button>
             <button type="button" className="gt-main-action" onClick={()=>navigate('intake')}><MessageCircle size={17}/><span>{tx('طلبات التصميم','Design requests')}</span></button>
           </div>
         </header>
-
-        {toolsOpen && <section className="gt-advanced-tools" aria-label={tx('أدوات متقدمة','Advanced tools')}>
-          <div className="gt-advanced-heading"><strong><SlidersHorizontal size={16}/>{tx('أدوات الإنتاج والتنبيهات','Production tools & notifications')}</strong><button type="button" onClick={()=>setToolsOpen(false)} aria-label={tx('إغلاق','Close')}><X size={18}/></button></div>
-          <div className="gt-legacy-nav">{advancedTools}</div>
-        </section>}
 
         <div className="gt-insight-strip">
           <div className="gt-insight"><span className="gt-insight-icon gt-blue"><Layers3 size={18}/></span><div><small>{tx('إجمالي الأوامر','Total jobs')}</small><strong>{total}</strong></div></div>
