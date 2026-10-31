@@ -202,7 +202,7 @@ export default function App() {
       const activeIds = new Set((data.jobs || []).map((job: PrintJob) => job.id));
       setUnacknowledgedJobs(previous => previous.filter(job => activeIds.has(job.id)));
       setLastSynced(new Date());
-      setFilesError('');
+      setFilesError(Array.isArray(data.warnings)?data.warnings.join('، '):'');
     } catch (err) {
       setFilesError(config.language === 'en' ? 'Could not refresh production files. Showing the last loaded data.' : 'تعذّر تحديث ملفات الإنتاج. تُعرض آخر بيانات تم تحميلها.');
     } finally {
@@ -232,18 +232,20 @@ export default function App() {
   };
 
   const handleUpdateJob = async (jobId: string, updates: Partial<PrintJob>) => {
-    if (isDisplayMode) return;
+    if (isDisplayMode) return false;
+    setOperationError('');
     try {
       const res = await fetch(`/api/files/${jobId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       });
-      if (res.ok) {
-        fetchFiles();
-      }
+      if(!res.ok){const result=await res.json().catch(()=>({}));throw Error(result.error||'تعذّر حفظ بيانات الملف');}
+      await fetchFiles();
+      return true;
     } catch (err) {
-      console.error(err);
+      setOperationError(err instanceof Error?err.message:'تعذّر حفظ بيانات الملف');
+      return false;
     }
   };
 

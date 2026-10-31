@@ -61,13 +61,13 @@ export default function ManagementGate({children}:{children:React.ReactNode}) {
           <div className="gt-auth-mobile-brand"><BrandMark branding={branding}/> {branding.name}</div>
           <span className="gt-auth-greeting"><ShieldCheck size={17}/> مساحة عمل آمنة</span>
           <h2>{state==='unconfigured'?'إعداد الدخول مطلوب':'مرحباً بعودتك'}</h2>
-          <p className="gt-auth-subtitle">{state==='unconfigured'?'لم يكتمل إعداد بيانات الدخول بعد.':'أدخل كلمة مرور الإدارة للوصول إلى مساحة عمل المطبعة.'}</p>
+          <p className="gt-auth-subtitle">{state==='unconfigured'?'لم يكتمل إعداد بيانات الدخول بعد.':'أدخل PIN أو كلمة مرور الإدارة للوصول إلى مساحة عمل المطبعة.'}</p>
 
           {state==='checking'? <div className="gt-auth-loading" role="status"><div className="gt-auth-spinner"/> جارٍ التحقق من جلسة الدخول...</div> :
             state==='unconfigured'?
-              <div className="gt-auth-warning" role="alert"><AlertCircle size={19}/><div><b>الإعدادات غير مكتملة</b><p>أنشئ ملف <code>.env</code> بجانب <code>package.json</code>، وأضف كلمة مرور المسؤول (12 حرفاً على الأقل) وسر جلسة عشوائياً (32 حرفاً على الأقل)، ثم أعد تشغيل الخادم.</p></div></div>:
+              <div className="gt-auth-warning" role="alert"><AlertCircle size={19}/><div><b>الإعدادات غير مكتملة</b><p>يلزم إعداد PIN من 4 إلى 12 رقماً أو كلمة مرور من 12 حرفاً على الأقل، وسر جلسة عشوائي من 32 حرفاً على الأقل، ثم إعادة تشغيل الخادم.</p></div></div>:
               <form onSubmit={login} className="gt-auth-form">
-                <label htmlFor="gt-password">كلمة مرور الإدارة</label>
+                <label htmlFor="gt-password">PIN / كلمة مرور الإدارة</label>
                 <div className="gt-auth-password">
                   <LockKeyhole size={19}/>
                   <input id="gt-password" required autoFocus type={showPassword?'text':'password'} autoComplete="current-password" value={password} placeholder="أدخل كلمة المرور" onChange={e=>setPassword(e.target.value)}/>

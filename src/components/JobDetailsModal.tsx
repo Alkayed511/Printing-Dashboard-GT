@@ -30,7 +30,7 @@ interface JobDetailsModalProps {
   onRefreshJobs?: () => void;
   onClose: () => void;
   onMoveJob: (id: string, targetStatus: FileStatus) => void;
-  onUpdateJob?: (id: string, updates: Partial<PrintJob>) => void;
+  onUpdateJob?: (id: string, updates: Partial<PrintJob>) => Promise<boolean> | void;
   basePath: string;
   currentDate: string;
   config: ServerConfig;
@@ -118,10 +118,10 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
 
   if (!job) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (readOnly) return;
     if (onUpdateJob && job) {
-      onUpdateJob(job.id, editForm);
+      if(await onUpdateJob(job.id, editForm)===false)return;
     }
     setIsEditing(false);
   };

@@ -5,15 +5,15 @@ type LedgerRow={
   id:string;jobId:string;filename:string;displayName?:string;previousNames:string[];printer:string;dateFolder:string;
   status:'pending'|'done';firstSeenAt:string;doneObservedAt:string|null;
   customerId:string;dimensions:string;material:string;quantity:number|null;quantitySource:'filename'|'manual'|'unknown';
-  priceJod:number|null;paidJod:number|null;balanceJod:number|null;notes:string;
+  priceJod:number|null;paidJod:number|null;balanceJod:number|null;notes:string;updatedAt:string;
 };
-type Form={customerId:string;displayName:string;quantity:string;dimensions:string;material:string;priceJod:string;paidJod:string;notes:string};
+type Form={customerId:string;displayName:string;quantity:string;dimensions:string;material:string;priceJod:string;paidJod:string;notes:string;expectedUpdatedAt:string};
 const input='w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500';
 const button='inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-blue-600 hover:bg-blue-500 font-semibold text-sm disabled:opacity-50';
 const formOf=(x:LedgerRow):Form=>({
   customerId:x.customerId,displayName:x.displayName||'',quantity:x.quantity===null?'':String(x.quantity),
   dimensions:x.dimensions,material:x.material,priceJod:x.priceJod===null?'':String(x.priceJod),
-  paidJod:x.paidJod===null?'':String(x.paidJod),notes:x.notes
+  paidJod:x.paidJod===null?'':String(x.paidJod),notes:x.notes,expectedUpdatedAt:x.updatedAt
 });
 async function getJson<T>(url:string,method='GET',body?:unknown):Promise<T>{
   const r=await fetch(url,{method,cache:'no-store',credentials:'same-origin',
@@ -34,10 +34,11 @@ export default function ProductionLedgerWorkspace(){
   const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
   const refresh=useCallback(async()=>{
     const [ledger,management]=await Promise.all([
-      getJson<{rows:LedgerRow[]}>('/api/management/ledger'),
+      getJson<{rows:LedgerRow[];warnings?:string[]}>('/api/management/ledger'),
       getJson<ManagementData>('/api/management/data')
     ]);
-    setRows(ledger.rows);setCustomers(management.customers.filter(c=>!c.archived));
+    setRows(ledger.rows);setCustomers(management.customers);
+    setError(ledger.warnings?.join('، ')||'');
   },[]);
   useEffect(()=>{refresh().catch(e=>setError(String(e)));const timer=setInterval(()=>refresh().catch(()=>{}),15000);return()=>clearInterval(timer);},[refresh]);
   const customerName=(id:string)=>customers.find(c=>c.id===id)?.name||'لم يتم تحديد العميل';
@@ -46,7 +47,7 @@ export default function ProductionLedgerWorkspace(){
       .some(v=>v.toLowerCase().includes(search.toLowerCase().trim()))),[rows,filter,search,customers]);
   const current=rows.find(r=>r.id===selected);
   const printed=rows.filter(r=>r.status==='done');
-  const priced=printed.filter(r=>r.priceJod!==null);
+  const priced=rows.filter(r=>r.priceJod!==null);
   const totalDebt=priced.reduce((sum,r)=>sum+Math.max(0,r.balanceJod||0),0);
   async function save(){
     if(!current||!form)return;
@@ -73,11 +74,11 @@ export default function ProductionLedgerWorkspace(){
     {error&&<div role="alert" className="text-rose-200 bg-rose-950/40 p-3 rounded-xl">{error}</div>}
     {message&&<div role="status" className="text-emerald-200 bg-emerald-950/40 p-3 rounded-xl">{message}</div>}
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {[['ملفات مرصودة',rows.length],['داخل done الآن',printed.length],['ملفات بسعر مسجّل',priced.length],['الذمم بالدينار',money(totalDebt)]].map(([label,v])=><div key={label} className="rounded-xl bg-slate-900 border border-slate-700 p-4"><span className="text-slate-400 text-xs">{label}</span><strong className="block mt-2 text-xl">{v}</strong></div>)}
+      {[['ملفات مرصودة',rows.length],['مسجّلة كمنجزة',printed.length],['ملفات بسعر مسجّل',priced.length],['الذمم بالدينار',money(totalDebt)]].map(([label,v])=><div key={label} className="rounded-xl bg-slate-900 border border-slate-700 p-4"><span className="text-slate-400 text-xs">{label}</span><strong className="block mt-2 text-xl">{v}</strong></div>)}
     </div>
     <div className="flex flex-wrap gap-2 items-center">
       {(['done','pending','all'] as const).map(v=><button key={v} onClick={()=>setFilter(v)} className={'rounded-xl py-2 px-4 text-sm '+(filter===v?'bg-blue-600':'bg-slate-800')}>{v==='done'?'المنجزة':v==='pending'?'بانتظار النقل':'الكل'}</button>)}
-      <div className="flex flex-1 min-w-44 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3"><Search size={16}/><input className="min-w-0 w-full bg-transparent outline-none py-2 text-sm" placeholder="اسم الملف / العميل / الطابعة" value={search} onChange={e=>setSearch(e.target.value)}/></div>
+      <label className="flex flex-1 min-w-44 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3"><Search size={16}/><span className="text-sm whitespace-nowrap">بحث السجل</span><input className="min-w-0 w-full bg-transparent outline-none py-2 text-sm" placeholder="اسم الملف / العميل / الطابعة" value={search} onChange={e=>setSearch(e.target.value)}/></label>
     </div>
     <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(330px,430px)] gap-4">
       <div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden">
@@ -88,7 +89,7 @@ export default function ProductionLedgerWorkspace(){
               <p className="text-xs mt-1">العدد: {r.quantity??'غير معروف'} · المقاس: {r.dimensions||'غير معروف'} · السعر: {money(r.priceJod)}</p>
               {!!r.previousNames?.length&&<p className="text-xs text-blue-300 mt-1">الاسم السابق: {r.previousNames.join('، ')}</p>}
             </div><span className={'shrink-0 text-xs rounded-lg px-2 py-1 '+(r.status==='done'?'bg-emerald-950 text-emerald-200':'bg-amber-950 text-amber-200')}>
-              {r.status==='done'?'داخل done':'قيد التحضير'}</span></div>
+              {r.status==='done'?'مسجّل كمنجز':'قيد التحضير'}</span></div>
             <p className="text-xs text-slate-500 mt-2">تم رصده في done: {date(r.doneObservedAt)}</p>
           </button>)}
       </div>
@@ -101,7 +102,7 @@ export default function ProductionLedgerWorkspace(){
           </label>
           <label className="block text-xs text-slate-400">العميل
             <select className={input+' mt-1'} value={form.customerId} onChange={e=>setForm({...form,customerId:e.target.value})}>
-              <option value="">غير مرتبط</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name} {c.whatsapp&&'— '+c.whatsapp}</option>)}
+              <option value="">غير مرتبط</option>{customers.filter(c=>!c.archived||c.id===form.customerId).map(c=><option disabled={c.archived} key={c.id} value={c.id}>{c.name} {c.archived?'(مؤرشف)':c.whatsapp&&'— '+c.whatsapp}</option>)}
             </select></label>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs text-slate-400">الكمية / عدد النسخ<input className={input+' mt-1'} type="number" min={1} step={1} value={form.quantity} onChange={e=>setForm({...form,quantity:e.target.value})}/></label>

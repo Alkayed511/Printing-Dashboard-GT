@@ -1,22 +1,36 @@
-// Run from the project root with an isolated Chrome debugging session on port 9291.
-// Only login/logout reach the server as writes; preference saves are intercepted.
+// Run: node --import tsx scripts/verify-workspace.cjs (after build).
+// Own server, SQLite, printer folders and Chrome profile; never reads the real .env.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-require('dotenv').config({quiet: true});
+const {spawn} = require('node:child_process');
+const {once} = require('node:events');
+let qaServer, chrome, browserSocket, password='SYNTHETIC-NOT-A-REAL-SECRET';
+const artifacts=fs.mkdtempSync(path.join(os.tmpdir(),'gt-qa-evidence-'));
 let phase = 'connect';
 (async () => {
-  const base = 'http://localhost:3000';
-  const login = await fetch(base + '/api/management/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: process.env.PRINT_ADMIN_PASSWORD})});
+  const {startTestServer}=await import('../src/server/testServer.ts');
+  qaServer=await startTestServer();
+  const base=qaServer.base;password=qaServer.password;
+  const profile=path.join(qaServer.root,'chrome');
+  const binary=process.env.GT_TEST_BROWSER||'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  if(!fs.existsSync(binary))throw Error('Chrome is not installed; set GT_TEST_BROWSER to a local Chrome/Edge executable');
+  chrome=spawn(binary,['--headless=new','--remote-debugging-port=0','--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','about:blank'],{windowsHide:true,stdio:'ignore'});
+  const portFile=path.join(profile,'DevToolsActivePort');
+  for(let n=0;n<100&&!fs.existsSync(portFile);n++)await new Promise(resolve=>setTimeout(resolve,100));
+  if(!fs.existsSync(portFile))throw Error('Isolated Chrome did not start');
+  const debugPort=Number(fs.readFileSync(portFile,'utf8').split('\n')[0]);
+  const login = await fetch(base + '/api/management/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password})});
   assert.equal(login.status, 200);
   const cookie = login.headers.get('set-cookie').split(';')[0];
   let config = await (await fetch(base + '/api/config', {headers: {Cookie: cookie}})).json();
   const files = await (await fetch(base + '/api/files', {headers: {Cookie: cookie}})).json();
   assert.ok(!files.jobs.some(job => /^job-\d+$/.test(job.id)), 'Seeded demo jobs must not appear');
   config = {...config, autoRefreshInterval: 0, language: 'ar', production:{...config.production,defaultStatus:'pending',hideEmptyPrinters:false,jobSort:'priority',cardDensity:'comfortable',confirmFileMoves:true}};
-  const targets = await (await fetch('http://127.0.0.1:9291/json/list')).json();
+  const targets = await (await fetch('http://127.0.0.1:'+debugPort+'/json/list')).json();
   const ws = new WebSocket(targets.find(target => target.type === 'page').webSocketDebuggerUrl);
+  browserSocket=ws;
   await new Promise((resolve, reject) => {ws.addEventListener('open', resolve, {once: true}); ws.addEventListener('error', reject, {once: true});});
   let id = 0;
   const pending = new Map();
@@ -80,7 +94,7 @@ let phase = 'connect';
   const setValue = (selector, value) => evaluate(`(()=>{const element=document.querySelector(${JSON.stringify(selector)}); const prototype=element.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype,'value').set.call(element,${JSON.stringify(value)});element.dispatchEvent(new Event(element.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;})()`);
   const labels = {home: 'نظرة عامة', kanban: 'الإنتاج والطباعة', customers: 'العملاء والحسابات', intake: 'الطلبات والتصاميم', ledger: 'سجل ملفات الطباعة', stats: 'التقارير والإحصائيات', management: 'الأقسام والطابعات', settings: 'الإعدادات'};
   const navigate = async tab => {await evaluate(`[...document.querySelectorAll('.gt-nav-item')].find(button=>button.textContent.includes(${JSON.stringify(labels[tab])})).click(); true`); await wait(`new URL(location.href).searchParams.get('tab')===${JSON.stringify(tab)} && !document.querySelector('.gt-loading-page')`);};
-  const screenshot = async name => {await new Promise(resolve => setTimeout(resolve, 400)); const result = await command('Page.captureScreenshot', {format: 'png', captureBeyondViewport: false}); fs.writeFileSync(path.join(os.tmpdir(), name), Buffer.from(result.data, 'base64'));};
+  const screenshot = async name => {await new Promise(resolve => setTimeout(resolve, 400)); const result = await command('Page.captureScreenshot', {format: 'png', captureBeyondViewport: false}); fs.writeFileSync(path.join(artifacts, name), Buffer.from(result.data, 'base64'));};
   await command('Page.enable'); await command('Runtime.enable'); await command('Network.enable');
   await command('Network.setBypassServiceWorker', {bypass: true});
   await command('Fetch.enable', {patterns: [{urlPattern: base + '/api/*'}]});
@@ -89,7 +103,7 @@ let phase = 'connect';
   phase = 'login';
   await wait("Boolean(document.getElementById('gt-password') || document.querySelector('.gt-department-screen,.gt-shell'))");
   if (await evaluate("Boolean(document.getElementById('gt-password'))")) {
-    await setValue('#gt-password', process.env.PRINT_ADMIN_PASSWORD); await evaluate("document.querySelector('.gt-auth-form').requestSubmit(); true");
+    await setValue('#gt-password', password); await evaluate("document.querySelector('.gt-auth-form').requestSubmit(); true");
   }
   phase = 'department';
   await wait("Boolean(document.querySelector('.gt-department-screen,.gt-shell'))");
@@ -132,6 +146,20 @@ let phase = 'connect';
   assert.equal(folderSetupCalls,beforePrepare+1,'An unchanged path can be prepared explicitly');
   phase = 'pages';
   for (const tab of ['kanban', 'customers', 'intake', 'ledger', 'stats', 'management', 'home']) await navigate(tab);
+  phase='ledger-debt';
+  // A pending/rework file still owes money. Only owned synthetic storage is used here.
+  await qaServer.login();
+  fs.writeFileSync(path.join(qaServer.storage,'2026-11-01','eco','QA-ledger.pdf'),'SYNTHETIC FILE');
+  const ledger=await (await qaServer.request('/api/management/ledger')).json();
+  assert.equal(ledger.rows.length,1);
+  assert.equal((await qaServer.request('/api/management/ledger/'+ledger.rows[0].id,{priceJod:100,paidJod:20},'PATCH')).status,200);
+  await navigate('ledger');await wait("document.body.innerText.includes('80.000')");
+  assert.equal(await evaluate("Boolean([...document.querySelectorAll('label')].find(label=>label.textContent.includes('بحث السجل'))?.querySelector('input'))"),true);
+  await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  assert.equal(await evaluate("document.documentElement.scrollWidth<=innerWidth"),true);
+  await screenshot('golden-target-ledger-mobile.png');
+  await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+  console.log('Ledger debt remains visible for pending files and search has a persistent label: passed');
   phase = 'manual-printer-configuration';
   await navigate('management');
   await evaluate("[...document.querySelectorAll('button')].find(button=>button.textContent.trim()==='إضافة طابعة للقسم').click(); true");
@@ -295,7 +323,7 @@ let phase = 'connect';
   await click('button[aria-label="Refresh data"]'); await wait("Boolean(document.getElementById('gt-password'))");
   assert.equal(await evaluate("document.querySelector('.gt-auth-error').textContent.includes('انتهت جلسة')"), true);
   sessionExpired = false;
-  await setValue('#gt-password', process.env.PRINT_ADMIN_PASSWORD); await evaluate("document.querySelector('.gt-auth-form').requestSubmit(); true");
+  await setValue('#gt-password', password); await evaluate("document.querySelector('.gt-auth-form').requestSubmit(); true");
   await wait("Boolean(document.querySelector('.gt-shell'))");
   phase = 'logout';
   await wait("Boolean(document.querySelector('button[aria-label=\"Open menu\"]'))");
@@ -306,4 +334,9 @@ let phase = 'connect';
   assert.equal(exceptions.length, 0); assert.equal(interceptionErrors.length, 0);
   console.log(JSON.stringify({allPassed: true, sessionExpiryPassed: true, logoutPassed: true, uncaughtBrowserErrors: 0, realConfigWrites: 0, realPrintFileWrites: 0}));
   ws.close();
-})().catch(error => {console.error(JSON.stringify({qaFailed: true, phase, reason: String(error.message).replaceAll(process.env.PRINT_ADMIN_PASSWORD, '[REDACTED]'), secretsLogged: false})); process.exit(1);});
+})().catch(error => {console.error(JSON.stringify({qaFailed: true, phase, reason: String(error.message).replaceAll(password, '[REDACTED]'), secretsLogged: false})); process.exitCode=1;}).finally(async()=>{
+  browserSocket?.close();
+  if(chrome&&chrome.exitCode===null){const exited=once(chrome,'exit');chrome.kill();await exited;}
+  await qaServer?.stop();
+  console.log(JSON.stringify({artifacts}));
+});
