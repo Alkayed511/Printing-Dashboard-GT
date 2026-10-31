@@ -62,6 +62,8 @@ export function reconcileLedger(scans:PrinterScan[], timestamp=new Date().toISOS
   for(const scan of scans){
     if(!scan.jobId||!scan.filename)continue;
     let row=byJobId.get(scan.jobId);
+    // A reused path is a new production file, never an automatic transfer of money.
+    if(row&&row.signature&&scan.signature&&row.signature!==scan.signature)row=undefined;
     // A uniquely matching filesystem signature can reconnect a renamed/moved file.
     if(!row&&scan.signature&&currentSignatures.get(scan.signature)===1&&historicalSignatures.get(scan.signature)?.length===1){
       const previous=historicalSignatures.get(scan.signature)![0];
@@ -83,10 +85,11 @@ export function reconcileLedger(scans:PrinterScan[], timestamp=new Date().toISOS
       }
       row.jobId=scan.jobId;
       row.printer=scan.printer;
+      row.dateFolder=scan.dateFolder;
       row.status=scan.status;
       row.signature=scan.signature||row.signature;
       if(!row.doneObservedAt&&scan.status==='done')row.doneObservedAt=timestamp;
-      if(!row.customerId&&scan.customerId)row.customerId=scan.customerId;
+      if(scan.customerId!==undefined)row.customerId=scan.customerId;
       if(!row.dimensions&&scan.dimensions)row.dimensions=scan.dimensions;
       if(!row.material&&scan.material)row.material=scan.material;
       if(row.quantitySource==='unknown'&&scan.quantity&&scan.quantity>0){
@@ -109,9 +112,10 @@ export function reconcileLedger(scans:PrinterScan[], timestamp=new Date().toISOS
   }catch(e){conn.exec('ROLLBACK');throw e;}
   return modified.size;
 }
-export function updateLedgerRow(id:string,patch:Record<string,unknown>):PrintLedgerRow{
+export function prepareLedgerUpdate(id:string,patch:Record<string,unknown>):PrintLedgerRow{
   const row=listLedger().find(x=>x.id===id);
   if(!row)throw Error('سجل الطباعة غير موجود');
+  if(patch.expectedUpdatedAt!==undefined&&patch.expectedUpdatedAt!==row.updatedAt)throw Error('تغيّر السجل بعد فتح النموذج؛ أعد اختياره قبل الحفظ');
   if(Object.prototype.hasOwnProperty.call(patch,'customerId'))row.customerId=String(patch.customerId||'').slice(0,150);
   if(Object.prototype.hasOwnProperty.call(patch,'displayName'))row.displayName=String(patch.displayName||'').trim().slice(0,250);
   if(Object.prototype.hasOwnProperty.call(patch,'quantity')){
@@ -127,6 +131,19 @@ export function updateLedgerRow(id:string,patch:Record<string,unknown>):PrintLed
     row.paidJod=patch.paidJod===null||patch.paidJod===''?null:roundMoney(patch.paidJod);
   if(row.priceJod!==null&&row.paidJod!==null&&row.paidJod>row.priceJod)throw Error('المدفوع أكبر من السعر');
   row.updatedAt=new Date().toISOString();
-  db().prepare('UPDATE ledger SET payload=?,updated_at=? WHERE id=?').run(JSON.stringify(row),row.updatedAt,id);
   return row;
+}
+export function persistLedgerUpdate(row:PrintLedgerRow,connection?:DatabaseSync){
+  let table='ledger';
+  const conn=connection||db();
+  if(connection){
+    const attached=connection.prepare('PRAGMA database_list').all() as {name:string}[];
+    if(!attached.some(x=>x.name==='print_ledger'))connection.prepare('ATTACH DATABASE ? AS print_ledger').run(path.join(path.resolve(process.env.PRINT_DATA_DIR||'.data'),'print-ledger.sqlite'));
+    table='print_ledger.ledger';
+  }
+  conn.prepare(`UPDATE ${table} SET payload=?,updated_at=? WHERE id=?`).run(JSON.stringify(row),row.updatedAt,row.id);
+  return row;
+}
+export function updateLedgerRow(id:string,patch:Record<string,unknown>):PrintLedgerRow{
+  return persistLedgerUpdate(prepareLedgerUpdate(id,patch));
 }

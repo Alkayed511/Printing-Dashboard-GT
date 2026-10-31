@@ -6,6 +6,10 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { PrintJob } from '../types';
 import { calculateEstimate, type PrintLine, type EstimateTotals } from '../utils/printMath';
 import { normalizeWhatsApp } from '../utils/whatsapp';
+import {listLedger} from './productionLedger';
+import {incomingMessages,listRequests} from './intakeStore';
+import {readServerSettings} from './sqliteStore';
+import type {DatabaseSync} from 'node:sqlite';
 
 type CRMCustomer = {
   id: string; name: string; contact: string; phone: string; whatsapp: string; email: string;
@@ -43,18 +47,23 @@ const nonnegative = (x: unknown, max = 1_000_000) => {
 };
 const authPass = process.env.PRINT_ADMIN_PASSWORD || '';
 const secret = process.env.PRINT_SESSION_SECRET || '';
-const configured = authPass.length >= 12 && secret.length >= 32;
+// Numeric workstation PINs and long passwords are both supported. Attempts remain throttled.
+const configured = (/^\d{4,12}$/.test(authPass) || authPass.length >= 12 && authPass.length <= 512) && secret.length >= 32;
 let db: Store | null = null;
 function readDb(): Store {
   return db ||= { ...initial(), ...readSnapshot() } as Store;
 }
-function saveDb() { writeSnapshot(readDb()); }
+function saveDb(effect?:(connection:DatabaseSync)=>void) {
+  try {writeSnapshot(readDb(),effect);}
+  catch(error) {db=null;throw error;}
+}
 const sign = (data: string) => createHmac('sha256', secret).update(data).digest('hex');
 function authenticated(req: Request) {
   if (!configured) return false;
   const raw = (req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith('gt_session='));
   if (!raw) return false;
-  const token = decodeURIComponent(raw.slice('gt_session='.length));
+  let token:string;
+  try {token=decodeURIComponent(raw.slice('gt_session='.length));}catch{return false;}
   const match = /^([0-9]{10,15})\.([a-f0-9]{64})$/.exec(token);
   if (!match || Number(match[1]) < Date.now()) return false;
   const expected = Buffer.from(sign(match[1]), 'hex');
@@ -76,6 +85,8 @@ function guard(req: Request, res: Response, next: NextFunction) {
   next();
 }
 function handleError(res: Response, e: unknown) {
+  // No rejected edit or failed SQLite transaction may remain visible in the cached snapshot.
+  db=null;
   res.status(400).json({ error: e instanceof Error ? e.message : 'Invalid request' });
 }
 function customerOf(id: string) {
@@ -185,8 +196,9 @@ export function attachManagementRoutes(app: Express) {
     try {
       const name = str(req.body.name);
       if (!name) throw new Error('اسم العميل مطلوب');
-      const phone=str(req.body.whatsapp||req.body.phone,80);
-      if(phone&&phoneMatches(phone).length)throw new Error('هذا الرقم مسجل مسبقاً. اختر العميل الموجود أو عدّل بياناته');
+      for(const phone of [req.body.whatsapp,req.body.phone]){
+        if(phone&&(!normalizeWhatsApp(phone)||phoneMatches(String(phone)).length))throw new Error('رقم غير صالح أو مسجل مسبقاً. اختر العميل الموجود أو عدّل بياناته');
+      }
       const customer: CRMCustomer = { id:uid(), name, contact:str(req.body.contact), phone:str(req.body.phone,80),
         whatsapp:str(req.body.whatsapp,80), email:str(req.body.email), address:str(req.body.address,400),
         taxNumber:str(req.body.taxNumber,100), category:str(req.body.category), paymentTerms:str(req.body.paymentTerms),
@@ -201,6 +213,9 @@ export function attachManagementRoutes(app: Express) {
       const keys = ['name','contact','phone','whatsapp','email','address','taxNumber','category','paymentTerms','notes'] as const;
       for (const key of keys) if (req.body[key] !== undefined) customer[key] = str(req.body[key], key==='notes'?2000:400);
       if (!customer.name) throw new Error('اسم العميل مطلوب');
+      for(const phone of [customer.phone,customer.whatsapp]){
+        if(phone&&(!normalizeWhatsApp(phone)||phoneMatches(phone).some(c=>c.id!==customer.id)))throw new Error('رقم غير صالح أو مسجل لعميل آخر');
+      }
       if (req.body.creditLimit !== undefined) customer.creditLimit = nonnegative(req.body.creditLimit);
       customer.updatedAt = now(); saveDb(); res.json(customer);
     } catch(e){handleError(res,e);}
@@ -240,7 +255,7 @@ export function attachManagementRoutes(app: Express) {
       const safeLines=lines.map(l=>({id:uid(),label:str(l.label),mode:l.mode,printerId:str(l.printerId),material:str(l.material),
         widthCm:Number(l.widthCm),heightCm:Number(l.heightCm),quantity:Number(l.quantity),rollWidthCm:Number(l.rollWidthCm),
         sheetWidthCm:Number(l.sheetWidthCm),sheetHeightCm:Number(l.sheetHeightCm),wastePercent:Number(l.wastePercent),
-        materialCostRate:Number(l.materialCostRate),printingCostRate:Number(l.printingCostRate),
+        materialCostRate:Number(l.materialCostRate),materialUnit:l.materialUnit,printingCostRate:Number(l.printingCostRate),
         finishingCostPerPiece:Number(l.finishingCostPerPiece),profitPercent:Number(l.profitPercent),
         profitMethod:l.profitMethod==='margin'?'margin' as const:'markup' as const}));
       const totals=calculateEstimate(safeLines,discountPercent,taxPercent);
@@ -266,14 +281,13 @@ export function attachManagementRoutes(app: Express) {
       if(!quote)throw new Error('عرض السعر غير موجود');
       if(quote.status==='approved') {res.json(quote);return;}
       const customer=customerOf(quote.customerId);
-      const first=quote.lines[0];
-      const order:PrintJob={id:'crm-'+uid(),filename:quote.title||'Print Order',printer:first.printerId||'eco',
+      const orders:PrintJob[]=quote.lines.map((line,index)=>({id:'crm-'+uid(),filename:(quote.title||'Print Order')+(quote.lines.length>1?' / '+(index+1):''),printer:line.printerId||'eco',
         status:'pending',sizeBytes:0,createdAt:now(),updatedAt:now(),
-        material:first.material,quantity:quote.lines.reduce((a,l)=>a+Number(l.quantity),0),
-        dimensions:first.widthCm+' × '+first.heightCm+' سم',customerName:customer.name,customerId:customer.id,
-        notes:'CRM quotation #'+quote.id};
-      quote.status='approved';quote.orderId=order.id;
-      readDb().orders.push(order);saveDb();res.json(quote);
+        material:line.material,quantity:Number(line.quantity),
+        dimensions:line.widthCm+' × '+line.heightCm+' سم',customerName:customer.name,customerId:customer.id,
+        notes:'CRM quotation #'+quote.id}));
+      quote.status='approved';quote.orderId=orders[0].id;
+      readDb().orders.push(...orders);saveDb();res.json(quote);
     }catch(e){handleError(res,e);}
   });
   router.post('/invoices',(req,res)=>{
@@ -293,19 +307,20 @@ export function attachManagementRoutes(app: Express) {
       const amount=nonnegative(req.body.amount);if(amount<=0||Math.abs(amount*1000-Math.round(amount*1000))>0.00001)throw new Error('المبلغ يجب أن يكون أكبر من صفر وبحد أقصى ثلاث منازل عشرية');
       const kind=req.body.kind==='refund'?'refund':'payment';
       const balance=invoiceBalance(invoice.id);
-      if(kind==='payment' && amount>Math.max(0,balance)+0.001)throw new Error('الدفعة أكبر من الرصيد المستحق');
-      if(kind==='refund' && amount>invoice.total-balance+0.001)throw new Error('المبلغ المسترد يتجاوز الدفعات المسجلة');
+      if(kind==='payment' && Math.round(amount*1000)>Math.max(0,Math.round(balance*1000)))throw new Error('الدفعة أكبر من الرصيد المستحق');
+      if(kind==='refund' && Math.round(amount*1000)>Math.round((invoice.total-balance)*1000))throw new Error('المبلغ المسترد يتجاوز الدفعات المسجلة');
       const payment:Payment={id:uid(),invoiceId:invoice.id,customerId:invoice.customerId,amount,
         kind,method:str(req.body.method)||'cash',note:str(req.body.note,500),createdAt:now()};
       readDb().payments.push(payment);saveDb();res.status(201).json(payment);
     }catch(e){handleError(res,e);}
   });
-  const linkJob=(id:string, customerId:string)=>{
+  const linkJob=(id:string, customerId:string,effect?:(connection:DatabaseSync)=>void)=>{
     if(customerId)customerOf(customerId);
+    if(listRequests().some(r=>r.customerId!==customerId&&(r.linkedJobId===id||r.linkedFiles?.some(file=>file.jobId===id))))throw new Error('الملف مربوط بطلب تصميم لعميل آخر؛ افصل ربط الطلب أولاً');
     if(customerId) readDb().jobLinks[id]=customerId; else delete readDb().jobLinks[id];
     const order=readDb().orders.find(o=>o.id===id);
     if(order){order.customerId=customerId;order.customerName=customerId?customerOf(customerId).name:'';}
-    saveDb();
+    saveDb(effect);
   };
   router.post('/jobs/link',(req,res)=>{
     try {
@@ -318,7 +333,7 @@ export function attachManagementRoutes(app: Express) {
     res.set('Content-Type','application/json; charset=utf-8');
     res.set('Content-Disposition','attachment; filename="print-management-backup.json"');
     res.set('Cache-Control','no-store');
-    res.json(readDb());
+    res.json({...readDb(),ledger:listLedger(),intake:{messages:incomingMessages(),requests:listRequests()},settings:readServerSettings()});
   });
   app.use('/api/management',router);
   return {
@@ -330,7 +345,7 @@ export function attachManagementRoutes(app: Express) {
     decorate: (job:PrintJob):PrintJob => {
       const id=readDb().jobLinks[job.id];
       const c=id&&readDb().customers.find(c=>c.id===id);
-      return c?{...job,customerId:c.id,customerName:c.name}:job;
+      return c?{...job,customerId:c.id,customerName:c.name}:{...job,customerId:''};
     },
     isManagedOrder: (id:string) => readDb().orders.some(o=>o.id===id),
     updateOrder: (id:string,changes:Partial<PrintJob>) => {

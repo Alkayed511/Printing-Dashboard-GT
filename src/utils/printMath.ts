@@ -15,6 +15,7 @@ export interface PrintLine {
   sheetHeightCm: number;
   wastePercent: number;
   materialCostRate: number;
+  materialUnit?: 'm2' | 'linear' | 'sheet' | 'piece';
   printingCostRate: number;
   finishingCostPerPiece: number;
   profitPercent: number;
@@ -56,6 +57,9 @@ export const defaultLine = (): PrintLine => ({
  * Roll nesting rotates the item only when doing so uses less length.
  * Sheet nesting uses a rectangular grid, no complex irregular shape packing. */
 export function calculateLine(input: PrintLine): LineResult {
+  if(!Number.isFinite(Number(input.wastePercent))||Number(input.wastePercent)<0||Number(input.wastePercent)>100)throw new Error('الهدر يجب أن يكون بين صفر و100%');
+  const profitPercent=Number(input.profitPercent);
+  if(!Number.isFinite(profitPercent)||profitPercent<0||profitPercent>1_000_000||(input.profitMethod==='margin'&&profitPercent>=100))throw new Error('نسبة ربح غير صالحة؛ الهامش يجب أن يقل عن 100%');
   const width = valid(Number(input.widthCm)) / 100;
   const height = valid(Number(input.heightCm)) / 100;
   const quantity = Math.floor(valid(Number(input.quantity), 1_000_000));
@@ -89,12 +93,19 @@ export function calculateLine(input: PrintLine): LineResult {
     sheets = Math.ceil(Math.ceil(quantity / across) * waste);
     units = sheets;
   } else { units = quantity * waste; }
-  const cost = units * (rate + printRate) + finishing;
-  const p = Math.min(99.99, valid(Number(input.profitPercent), 100));
-  const selling = input.profitMethod === 'margin' ? cost / (1 - p / 100) : cost * (1 + p / 100);
   const chargeableAreaM2 = input.mode === 'roll' ? length * valid(Number(input.rollWidthCm)) / 100
     : input.mode === 'sheet' ? sheets * valid(Number(input.sheetWidthCm)) * valid(Number(input.sheetHeightCm)) / 10000
     : area * waste;
+  let materialUnits=units;
+  if(input.materialUnit){
+    if(input.materialUnit==='m2')materialUnits=chargeableAreaM2;
+    else if(input.materialUnit==='piece')materialUnits=quantity*waste;
+    else if(input.materialUnit==='linear'&&(input.mode==='linear'||input.mode==='roll'))materialUnits=length;
+    else if(input.materialUnit==='sheet'&&input.mode==='sheet')materialUnits=sheets;
+    else throw new Error('وحدة سعر الخامة غير متوافقة مع طريقة الحساب');
+  }
+  const cost = materialUnits * rate + units * printRate + finishing;
+  const selling = input.profitMethod === 'margin' ? cost / (1 - profitPercent / 100) : cost * (1 + profitPercent / 100);
   return { pieces: quantity, netAreaM2: area, chargeableAreaM2, linearMeters: length,
     sheets, across, productionCost: money(cost), sellingPrice: money(selling), profit: money(selling-cost) };
 }

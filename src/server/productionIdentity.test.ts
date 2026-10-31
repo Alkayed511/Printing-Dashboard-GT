@@ -1,0 +1,16 @@
+import {strict as assert} from 'node:assert';
+import {productionFileId,filenameQuantity,filenameDimensions,escapeHtml,csvCell} from './productionIdentity.ts';
+const stats={dev:1,ino:123,birthtimeMs:1000,ctimeMs:2000,size:10};
+assert.equal(productionFileId('/test','/test/eco/a.pdf',stats),productionFileId('/test','/test/flat/done/renamed.pdf',{...stats,size:20,ctimeMs:3000}));
+assert.notEqual(productionFileId('/test','/test/a.pdf',stats),productionFileId('/test','/test/a.pdf',{...stats,ino:124}));
+assert.notEqual(productionFileId('/test','/test/a.pdf',stats),productionFileId('/other','/other/a.pdf',stats));
+assert.notEqual(productionFileId('/test','/test/a.pdf',{...stats,ino:0}),productionFileId('/test','/test/b.pdf',{...stats,ino:0}));
+const big={dev:1n,ino:9007199254740992n,birthtimeMs:1000n,ctimeMs:2000n,size:10n};
+assert.notEqual(productionFileId('/test','/test/a.pdf',big),productionFileId('/test','/test/b.pdf',{...big,ino:9007199254740993n}));
+assert.equal(filenameQuantity('25 pcs.pdf'),25);assert.equal(filenameQuantity('banner.pdf'),null);
+assert.equal(filenameQuantity('25 copies.pdf'),25);assert.equal(filenameQuantity('2.5pcs.pdf'),null);
+assert.equal(filenameDimensions('banner_150.5x200cm.pdf'),'150.5x200cm');
+assert.equal(filenameDimensions('unknown.pdf'),'مواصفات قياسية');
+assert.equal(escapeHtml('<b>test</b>'),'&lt;b&gt;test&lt;/b&gt;');
+assert.equal(csvCell('a,b"c'),'"a,b""c"');assert.equal(csvCell('=1+1'),'"\'=1+1"');
+console.log('Filesystem identity, conservative fallback, metadata parsing and export encoding tests passed');

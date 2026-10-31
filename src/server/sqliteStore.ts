@@ -30,7 +30,7 @@ export function readJobLinks(): Record<string,string> {
   return Object.fromEntries(rows.map(r=>[r.job_id,r.customer_id]));
 }
 /** Atomically flush the in-memory snapshot. No partial financial writes. */
-export function writeSnapshot(data: {jobLinks: Record<string,string>} & Record<RecordName,Array<{id:string}>>) {
+export function writeSnapshot(data: {jobLinks: Record<string,string>} & Record<RecordName,Array<{id:string}>>, effect?:(connection:DatabaseSync)=>void) {
   const db = openDb();
   db.exec('BEGIN IMMEDIATE');
   try {
@@ -42,6 +42,7 @@ export function writeSnapshot(data: {jobLinks: Record<string,string>} & Record<R
     db.prepare('DELETE FROM job_links').run();
     const insert = db.prepare('INSERT INTO job_links (job_id,customer_id) VALUES (?,?)');
     for(const [jobId,cId] of Object.entries(data.jobLinks)) insert.run(jobId,cId);
+    effect?.(db);
     db.exec('COMMIT');
   } catch(error) { db.exec('ROLLBACK'); throw error; }
 }

@@ -31,6 +31,13 @@ try{
   assert.equal(listLedger().length,1);
   assert.equal(listLedger()[0].quantity,3,'Manual quantity retained across renames');
   assert.equal(listLedger()[0].paidJod,5);
+  reconcileLedger([{...printed,jobId:'after-second-rename',signature:'different-file',filename:'replacement.pdf'}]);
+  assert.equal(listLedger().length,2,'A reused path with a different identity must not inherit money');
+  assert.equal(listLedger().find(x=>x.signature==='different-file')!.paidJod,null);
+  reconcileLedger([{...printed,jobId:'after-second-rename',signature:'different-file',filename:'replacement.pdf',customerId:'customer-2'}]);
+  assert.equal(listLedger().find(x=>x.signature==='different-file')!.customerId,'customer-2');
+  reconcileLedger([{...printed,jobId:'after-second-rename',signature:'different-file',filename:'replacement.pdf',customerId:''}]);
+  assert.equal(listLedger().find(x=>x.signature==='different-file')!.customerId,'');
   console.log('Print ledger monitoring, rename retention and financial fields tests passed');
 }finally{
   closeProductionLedger();

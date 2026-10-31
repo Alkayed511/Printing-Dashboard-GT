@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
-import {listLedger,reconcileLedger,updateLedgerRow} from './src/server/productionLedger';
+import {listLedger,reconcileLedger,prepareLedgerUpdate,persistLedgerUpdate} from './src/server/productionLedger';
 import { attachManagementRoutes, resolveWhatsappCustomer } from './src/server/management';
 import { mountWhatsAppWebhook, mountIntakeRoutes } from './src/server/whatsapp';
 import { readServerSettings, writeServerSettings, readLocalState, writeLocalState } from './src/server/sqliteStore';
-import {updateServerConfig, inspectProductionStorage} from './src/server/serverConfig';
+import {updateServerConfig, inspectProductionStorage,validFolderName} from './src/server/serverConfig';
 import {productionSettings} from './src/utils/production';
 import {moveProductionFile} from './src/server/productionFiles';
+import {productionFileId,filenameQuantity,filenameDimensions,escapeHtml,csvCell} from './src/server/productionIdentity';
 import {resolveBranding} from './src/utils/branding';
 import {ensureProductionFolders, productionFoldersRequested} from './src/server/productionFolders';
 import path from 'path';
@@ -98,8 +99,8 @@ let serverConfig: ServerConfig = {
 
 serverConfig = { ...serverConfig, ...readServerSettings() } as ServerConfig;
 
-// In-memory overrides for real disk jobs
-let jobOverrides: Record<string, Partial<PrintJob>> = {};
+// Durable metadata for real disk jobs; physical status and printer come from disk.
+let jobOverrides: Record<string, Partial<PrintJob>> = readLocalState('jobOverrides',{});
 
 // In-memory file database for simulation or sync
 let mockJobs: PrintJob[] = [
@@ -217,34 +218,36 @@ let mockJobs: PrintJob[] = [
   }
 ];
 
-let globalOrderCounter = 1001;
-const filePathToOrderMap = new Map<string, string>();
-
-function getOrderId(dateDirName: string, printer: string, filename: string): string {
-  return 'file-' + createHash('sha256').update(JSON.stringify([dateDirName,printer,filename])).digest('hex').slice(0,24);
-}
-
 // Helper: check if a target path is real on local disk
+let scanWarnings:string[]=[];
 function scanDateDirectory(dateDir: string): PrintJob[] {
+    scanWarnings=[];
     const realJobs: PrintJob[] = [];
+    const entriesOf=(folder:string):fs.Dirent[]=>{
+      try {if(fs.lstatSync(folder).isSymbolicLink())return [];return fs.readdirSync(folder,{withFileTypes:true});}
+      catch(error) {if((error as NodeJS.ErrnoException).code!=='ENOENT')scanWarnings.push('تعذّرت قراءة أحد مجلدات الطابعات؛ قد تكون القائمة غير مكتملة');return [];}
+    };
+    const fileStat=(filename:string)=>{try{return fs.statSync(filename,{bigint:true});}catch{scanWarnings.push('تغيّر ملف أثناء المسح أو تعذّرت قراءته؛ أعد التحديث');return null;}};
+    try {if(fs.lstatSync(dateDir).isSymbolicLink())return [];}catch{return [];}
     const printerIds = serverConfig.printers?.map(p => p.id) || [];
     printerIds.forEach((printer) => {
       const printerDir = path.join(dateDir, printer);
       const doneDir = path.join(printerDir, 'done');
+      try {if(fs.lstatSync(printerDir).isSymbolicLink()){scanWarnings.push('تم تجاهل رابط مجلد طابعة حفاظاً على حدود مسار الإنتاج');return;}}catch{return;}
 
       if (fs.existsSync(printerDir)) {
-        const entries = fs.readdirSync(printerDir, { withFileTypes: true });
+        const entries = entriesOf(printerDir);
         entries.forEach((entry) => {
           if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
             const filePath = path.join(printerDir, entry.name);
-            const stats = fs.statSync(filePath);
+            const stats = fileStat(filePath);if(!stats)return;
             realJobs.push({
-              id: getOrderId(path.basename(dateDir), printer, entry.name),
-              fileSignature: createHash('sha256').update(JSON.stringify([path.resolve(dateDir),printer,stats.birthtimeMs,stats.size])).digest('hex'),
+              id: productionFileId(serverConfig.basePath,filePath,stats),
+              fileSignature: productionFileId(serverConfig.basePath,filePath,stats),
               filename: entry.name,
               printer: printer as PrinterType,
               status: 'pending',
-              sizeBytes: stats.size,
+              sizeBytes: Number(stats.size),
               createdAt: stats.birthtime.toISOString(),
               updatedAt: stats.mtime.toISOString(),
               dimensions: parseDimensions(entry.name),
@@ -257,18 +260,18 @@ function scanDateDirectory(dateDir: string): PrintJob[] {
       }
 
       if (fs.existsSync(doneDir)) {
-        const entries = fs.readdirSync(doneDir, { withFileTypes: true });
+        const entries = entriesOf(doneDir);
         entries.forEach((entry) => {
           if (entry.isFile() && !entry.name.startsWith('.') && !entry.name.toLowerCase().includes('thumb') && !entry.name.toLowerCase().includes('desktop.ini')) {
             const filePath = path.join(doneDir, entry.name);
-            const stats = fs.statSync(filePath);
+            const stats = fileStat(filePath);if(!stats)return;
             realJobs.push({
-              id: getOrderId(path.basename(dateDir), printer, entry.name),
-              fileSignature: createHash('sha256').update(JSON.stringify([path.resolve(dateDir),printer,stats.birthtimeMs,stats.size])).digest('hex'),
+              id: productionFileId(serverConfig.basePath,filePath,stats),
+              fileSignature: productionFileId(serverConfig.basePath,filePath,stats),
               filename: entry.name,
               printer: printer as PrinterType,
               status: 'done',
-              sizeBytes: stats.size,
+              sizeBytes: Number(stats.size),
               createdAt: stats.birthtime.toISOString(),
               updatedAt: stats.mtime.toISOString(),
               dimensions: parseDimensions(entry.name),
@@ -280,7 +283,10 @@ function scanDateDirectory(dateDir: string): PrintJob[] {
         });
       }
     });
-    return realJobs;
+    // Multiple live paths to one inode are ambiguous (e.g. an interrupted move).
+    // Do not collapse them or assign one path's financial identity to another.
+    const counts=new Map<string,number>();for(const job of realJobs)counts.set(job.id,(counts.get(job.id)||0)+1);
+    return realJobs.map(job=>counts.get(job.id)!>1?{...job,id:job.id+'-'+createHash('sha256').update(JSON.stringify([dateDir,job.printer,job.status,job.filename])).digest('hex').slice(0,12),fileSignature:''}:job);
 }
 
 function parseFolderNameDate(name: string): number | null {
@@ -289,21 +295,29 @@ function parseFolderNameDate(name: string): number | null {
   if (dmMatch) {
     const d = parseInt(dmMatch[1]);
     const m = parseInt(dmMatch[2]) - 1;
-    return new Date(new Date().getFullYear(), m, d).getTime();
+    return Date.UTC(new Date().getFullYear(), m, d);
   }
   const dmyMatch = name.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
   if (dmyMatch) {
     const d = parseInt(dmyMatch[1]);
     const m = parseInt(dmyMatch[2]) - 1;
     const y = parseInt(dmyMatch[3]);
-    return new Date(y, m, d).getTime();
+    return Date.UTC(y, m, d);
   }
   return null;
 }
 
 function getJobsForReport(basePath: string, type: string, startDate?: string, endDate?: string): PrintJob[] {
   let allJobs: PrintJob[] = [];
-  if (!fs.existsSync(basePath)) return [];
+  const historical=listLedger().filter(row=>{
+    const t=parseFolderNameDate(row.dateFolder);
+    if(t===null||!startDate)return false;
+    if(type==='monthly'){const d=new Date(t);return d.getUTCFullYear()===Number(startDate.slice(0,4))&&d.getUTCMonth()+1===Number(startDate.slice(5,7));}
+    const start=new Date(startDate).getTime();
+    return type==='daily'?t===start:type==='custom'&&!!endDate&&t>=start&&t<new Date(endDate).getTime()+86400000;
+  }).map(row=>management.decorate({id:row.jobId,filename:row.displayName||row.filename,printer:row.printer,status:row.status,
+    createdAt:row.firstSeenAt,updatedAt:row.updatedAt,sizeBytes:0,customerId:row.customerId,dimensions:row.dimensions,material:row.material,quantity:row.quantity??undefined}));
+  if (!fs.existsSync(basePath)) return historical;
 
   const entries = fs.readdirSync(basePath, { withFileTypes: true });
   
@@ -325,7 +339,7 @@ function getJobsForReport(basePath: string, type: string, startDate?: string, en
         const entryTime = parseFolderNameDate(entry.name);
         if (entryTime) {
            const d = new Date(entryTime);
-           if (d.getFullYear() === targetY && d.getMonth() === targetM) {
+            if (d.getUTCFullYear() === targetY && d.getUTCMonth() === targetM) {
              allJobs.push(...scanDateDirectory(path.join(basePath, entry.name)));
            }
         }
@@ -337,20 +351,23 @@ function getJobsForReport(basePath: string, type: string, startDate?: string, en
     entries.forEach(entry => {
       if (entry.isDirectory()) {
         const t = parseFolderNameDate(entry.name);
-        if (t !== null && t >= start && t <= end) {
+        if (t !== null && t >= start && t < end) {
           allJobs.push(...scanDateDirectory(path.join(basePath, entry.name)));
         }
       }
     });
   }
-  return allJobs.map(j => ({ ...j, ...(jobOverrides[j.id] || {}) }));
+  const merged=new Map(historical.map(j=>[j.id,j]));
+  for(const job of allJobs){const saved=merged.get(job.id);merged.set(job.id,management.decorate({...job,...saved,...(jobOverrides[job.id]||{})}));}
+  return [...merged.values()];
 }
 
 
 function checkDiskStorage(baseP: string, dateStr: string) {
   try {
     const fullDatePath = path.join(baseP, dateStr);
-    if (fs.existsSync(baseP) || fs.existsSync(fullDatePath)) {
+    if (!fs.lstatSync(fullDatePath).isSymbolicLink() && fs.statSync(fullDatePath).isDirectory()) {
+      fs.accessSync(fullDatePath,fs.constants.R_OK);
       return true;
     }
   } catch (e) {
@@ -360,7 +377,7 @@ function checkDiskStorage(baseP: string, dateStr: string) {
 }
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads');
+const uploadsDir = process.env.PRINT_UPLOAD_DIR ? path.resolve(process.env.PRINT_UPLOAD_DIR) : path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -555,7 +572,7 @@ function observeScannedProduction(day:string,jobs:PrintJob[]){
     signature:j.fileSignature||'',createdAt:j.createdAt,customerId:j.customerId,
     dimensions:j.dimensions==='مواصفات قياسية'?'':j.dimensions,
     material:j.material==='حسب الطلب'?'':j.material,
-    quantity:/(\d+)\s*(?:قطعة|قطع|pcs|copies)/i.test(j.filename)?j.quantity:null
+    quantity:filenameQuantity(j.filename)
   })));
 }
 const withBalance=(r:ReturnType<typeof listLedger>[number])=>({
@@ -567,17 +584,20 @@ app.get('/api/management/ledger',(_req:Request,res:Response)=>{
     if(checkDiskStorage(serverConfig.basePath,day))
       observeScannedProduction(day,scanDateDirectory(path.join(serverConfig.basePath,day)).map(j=>management.decorate(j)));
     res.set('Cache-Control','no-store');
-    res.json({rows:listLedger().map(withBalance)});
+    res.json({rows:listLedger().map(withBalance),warnings:scanWarnings});
   }catch(error){res.status(500).json({error:error instanceof Error?error.message:'تعذّر قراءة سجل الطباعة'});}
 });
 app.patch('/api/management/ledger/:id',(req:Request,res:Response)=>{
   try{
     const patch=req.body||{};
-    if(patch.customerId&&!management.hasCustomer(String(patch.customerId))){
+    const original=listLedger().find(row=>row.id===req.params.id);
+    const customerChanged=Object.prototype.hasOwnProperty.call(patch,'customerId')&&String(patch.customerId||'')!==original?.customerId;
+    if(customerChanged&&patch.customerId&&!management.hasCustomer(String(patch.customerId))){
       res.status(400).json({error:'العميل غير موجود'});return;
     }
-    const row=updateLedgerRow(req.params.id,patch);
-    if(Object.prototype.hasOwnProperty.call(patch,'customerId'))management.linkJob(row.jobId,row.customerId);
+    const row=prepareLedgerUpdate(req.params.id,patch);
+    if(customerChanged)management.linkJob(row.jobId,row.customerId,connection=>persistLedgerUpdate(row,connection));
+    else persistLedgerUpdate(row);
     res.json(withBalance(row));
   }catch(error){res.status(400).json({error:error instanceof Error?error.message:'تعذّر تعديل سجل الطباعة'});}
 });
@@ -585,13 +605,14 @@ app.patch('/api/management/ledger/:id',(req:Request,res:Response)=>{
 // GET /api/files - List files for selected date
 app.get('/api/files', (req: Request, res: Response) => {
   const selectedDate = (req.query.date as string) || serverConfig.currentDate;
+  if(!validFolderName(selectedDate)){res.status(400).json({error:'تاريخ مجلد غير صالح'});return;}
   const isReal = checkDiskStorage(serverConfig.basePath, selectedDate);
   if (isReal) {
     const dateDir = path.join(serverConfig.basePath, selectedDate);
     const realJobs = scanDateDirectory(dateDir);
     const jobsWithOverrides = realJobs.map(j => management.decorate({ ...j, ...(jobOverrides[j.id] || {}) }));
     observeScannedProduction(selectedDate,jobsWithOverrides);
-    res.json({ jobs: [...jobsWithOverrides, ...management.getOrders(req)], isRealStorage: true, scannedPath: dateDir });
+    res.json({ jobs: [...jobsWithOverrides, ...management.getOrders(req)], isRealStorage: true, scannedPath: dateDir,warnings:scanWarnings });
 
   } else {
     // An unavailable production folder must not turn sample files into apparent real work.
@@ -616,16 +637,12 @@ app.post('/api/files/move', (req: Request, res: Response) => {
     if (!job) {res.status(404).json({error:'الملف غير موجود في تاريخ العمل الحالي؛ حدّث اللوحة'}); return;}
     const destination = printer || job.printer;
     const result = moveProductionFile(dateDir, job, targetStatus, destination);
-    const nextId = getOrderId(serverConfig.currentDate, destination, job.filename);
     const overrides = {...jobOverrides[id], updatedAt:new Date().toISOString()};
-    if (nextId !== id) {
-      const customerId = management.decorate(job).customerId;
-      if (customerId) management.linkJob(nextId, customerId);
-      delete jobOverrides[id];
-    }
     // Status and printer are read from disk, never simulated after a failed move.
     delete overrides.status; delete overrides.printer;
-    jobOverrides[nextId] = overrides;
+    jobOverrides[id] = overrides;
+    writeLocalState('jobOverrides',jobOverrides);
+    observeScannedProduction(serverConfig.currentDate,scanDateDirectory(dateDir).map(j=>management.decorate(j)));
     res.json({success:true, fileMovedOnDisk:result.moved});
   } catch (error) {res.status(409).json({error:error instanceof Error ? error.message : 'تعذّر نقل الملف؛ تحقق من صلاحيات المجلد'});}
 });
@@ -634,6 +651,8 @@ app.post('/api/files/move', (req: Request, res: Response) => {
 app.put('/api/files/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const { customerName, customerId, material, quantity, notes, dimensions, printer, priority } = req.body;
+  if(quantity!==undefined&&(!Number.isInteger(Number(quantity))||Number(quantity)<1||Number(quantity)>1_000_000)){res.status(400).json({error:'الكمية يجب أن تكون عدداً صحيحاً موجباً'});return;}
+  if(printer!==undefined&&!serverConfig.printers?.some(p=>p.id===printer)){res.status(400).json({error:'طابعة غير صالحة'});return;}
   if (management.isManagedOrder(id)) {
     management.updateOrder(id, {customerName,material,quantity,notes,dimensions,printer,priority});
     if (customerId !== undefined) management.linkJob(id,String(customerId||''));
@@ -650,9 +669,10 @@ app.put('/api/files/:id', (req: Request, res: Response) => {
   if (quantity !== undefined) jobOverrides[id].quantity = Number(quantity);
   if (notes !== undefined) jobOverrides[id].notes = notes;
   if (dimensions !== undefined) jobOverrides[id].dimensions = dimensions;
-  if (printer !== undefined) jobOverrides[id].printer = printer;
+  // Printer/status must only change through an actual filesystem move.
   if (priority !== undefined) jobOverrides[id].priority = priority;
   jobOverrides[id].updatedAt = new Date().toISOString();
+  writeLocalState('jobOverrides',jobOverrides);
 
   // Also update mockJobs if it exists there
   const jobIndex = mockJobs.findIndex((j) => j.id === id);
@@ -678,7 +698,7 @@ app.get('/api/reports/export/pdf', (req: Request, res: Response) => {
   const { type, startDate, endDate } = req.query;
   
   let filtered: PrintJob[] = [];
-  if (serverConfig.isRealStorageAvailable) {
+  {
     filtered = getJobsForReport(serverConfig.basePath, type as string, startDate as string, endDate as string);
   }
 
@@ -687,12 +707,12 @@ app.get('/api/reports/export/pdf', (req: Request, res: Response) => {
 
   const rows = filtered.map(j => `
     <tr>
-      <td>${j.id}</td>
-      <td style="direction: ltr; text-align: right;">${j.filename}</td>
-      <td>${j.printer.toUpperCase()}</td>
+      <td>${escapeHtml(j.id)}</td>
+      <td style="direction: ltr; text-align: right;">${escapeHtml(j.filename)}</td>
+      <td>${escapeHtml(j.printer.toUpperCase())}</td>
       <td>${j.status === 'done' ? 'مكتمل' : 'قيد الانتظار'}</td>
-      <td>${j.customerName || '-'}</td>
-      <td>${j.material || '-'}</td>
+      <td>${escapeHtml(j.customerName || '-')}</td>
+      <td>${escapeHtml(j.material || '-')}</td>
       <td>${j.quantity || 1}</td>
     </tr>
   `).join('');
@@ -725,7 +745,7 @@ app.get('/api/reports/export/pdf', (req: Request, res: Response) => {
       <h1>تقرير جرد أوامر الطباعة</h1>
       <div class="meta">
         <p>نوع الجرد: ${type === 'daily' ? 'يومي' : type === 'monthly' ? 'شهري' : 'مخصص'}</p>
-        <p>الفترة: ${type === 'daily' ? startDate : type === 'monthly' ? startDate : `${startDate} إلى ${endDate}`}</p>
+        <p>الفترة: ${escapeHtml(type === 'daily' || type === 'monthly' ? startDate : `${startDate} إلى ${endDate}`)}</p>
         <p>إجمالي الأوامر: <strong>${filtered.length}</strong></p>
       </div>
       <table>
@@ -761,14 +781,14 @@ app.get('/api/reports/export', (req: Request, res: Response) => {
   let csv = headers;
 
   let filtered: PrintJob[] = [];
-  if (serverConfig.isRealStorageAvailable) {
+  {
     filtered = getJobsForReport(serverConfig.basePath, type as string, startDate as string, endDate as string);
   }
 
   filtered = filtered.filter(j => j.status === 'done');
 
   filtered.forEach(j => {
-     csv += `${j.id},${j.filename},${j.printer},${j.status === 'done' ? 'مكتمل' : 'قيد الانتظار'},${j.sizeBytes},${j.createdAt},${j.updatedAt},${j.customerName},${j.material},${j.quantity},${j.dimensions}\n`;
+     csv += [j.id,j.filename,j.printer,j.status === 'done' ? 'مكتمل' : 'قيد الانتظار',j.sizeBytes,j.createdAt,j.updatedAt,j.customerName,j.material,j.quantity,j.dimensions].map(csvCell).join(',')+'\n';
   });
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -777,8 +797,7 @@ app.get('/api/reports/export', (req: Request, res: Response) => {
 });
 
 function parseDimensions(name: string): string {
-  const match = name.match(/(\d+x\d+cm|\d+x\d+m|\d+×\d+سم|\d+×\d+متر)/i);
-  return match ? match[0] : 'مواصفات قياسية';
+  return filenameDimensions(name);
 }
 
 function parseMaterial(name: string): string {
@@ -791,8 +810,7 @@ function parseMaterial(name: string): string {
 }
 
 function parseQuantity(name: string): number {
-  const match = name.match(/(\d+)(قطعة|قطع|pcs|copies)/i);
-  return match ? parseInt(match[1], 10) : 1;
+  return filenameQuantity(name)??1;
 }
 
 function parseCustomer(name: string): string {
@@ -816,6 +834,17 @@ function getPrinterColor(p: PrinterType): string {
 
 // Start Express server with Vite middleware
 async function startServer() {
+  // Observe the configured day even when no dashboard is open. Never create/move printer files here.
+  let lastObservation=0;
+  const observer=setInterval(()=>{
+    if(serverConfig.autoRefreshInterval===0)return;
+    if(lastObservation&&Date.now()-lastObservation<serverConfig.autoRefreshInterval*1000)return;
+    lastObservation=Date.now();
+    if(!checkDiskStorage(serverConfig.basePath,serverConfig.currentDate))return;
+    try {observeScannedProduction(serverConfig.currentDate,scanDateDirectory(path.join(serverConfig.basePath,serverConfig.currentDate)).map(j=>management.decorate(j)));}
+    catch {console.error('Production observation failed; retained history remains available');}
+  },1000);
+  observer.unref();
   if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') {
     try {
       onSnapshot(doc(db, 'settings', 'global'), (snap) => {
@@ -857,7 +886,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
     console.log(`Print Shop Kanban Server running on http://localhost:${PORT}`);
   });
 }

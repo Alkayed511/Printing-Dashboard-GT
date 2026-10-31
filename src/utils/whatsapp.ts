@@ -1,6 +1,6 @@
 /** Normalize WhatsApp numbers for matching, without guessing non-Jordan country codes. */
 export function normalizeWhatsApp(input:unknown):string {
-  let digits=String(input??'').replace(/\D/g,'');
+  let digits=String(input??'').replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)-(c>='۰'?0x6f0:0x660))).replace(/\D/g,'');
   if(digits.startsWith('00')) digits=digits.slice(2);
   if(/^07\d{8}$/.test(digits)) digits='962'+digits.slice(1);
   else if(/^7\d{8}$/.test(digits)) digits='962'+digits;
