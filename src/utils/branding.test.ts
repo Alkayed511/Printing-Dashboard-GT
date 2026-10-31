@@ -10,6 +10,9 @@ const dark=appearanceVariables(resolveBranding(),'dark');
 assert.notEqual(light['--app-canvas'],dark['--app-canvas']);
 assert.ok(contrastRatio(light['--app-text'],light['--app-surface'])>=4.5);
 assert.ok(contrastRatio(dark['--app-text'],dark['--app-surface'])>=4.5);
+for(const palette of [light,dark])for(const background of ['--app-canvas','--app-surface','--app-sidebar','--app-raised'] as const){
+  assert.ok(contrastRatio(palette['--app-muted'],palette[background])>=4.5,`Secondary text must remain readable on ${background}`);
+}
 assert.ok(Math.abs(contrastRatio('#000000','#ffffff')-21)<.01);
 assert.equal(appearanceVariables(resolveBranding({textColor:'#887766',fontSize:20}),'dark')['--app-text'],'#887766');
 assert.equal(appearancePresets.some(preset=>preset.settings.name!==undefined||preset.settings.logo!==undefined),false,'Presets must not overwrite the business identity');
