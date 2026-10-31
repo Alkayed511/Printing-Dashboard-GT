@@ -85,6 +85,7 @@ html{font-size:calc(16px * var(--app-font-scale,1));}
 /* Operational metadata stays legible, including when the user scales text down. */
 .gt-workspace-v2 :is(.gt-stat-caption,.gt-overview-stat p,.gt-recent-title strong,.gt-recent-title small,.gt-status-badge,.gt-workload-row small,.gt-nav-label,.gt-connection,.gt-workspace-status,.gt-production-filter-fields label,.gt-production-filter-fields select,.gt-production-viewbar>label){font-size:max(12px,calc(12px * var(--app-font-scale,1)));}
 .gt-workspace-v2 .gt-mobile-bottom button span{font-size:max(12px,calc(12px * var(--app-font-scale,1)));white-space:normal;line-height:1.3;}
+.gt-workspace-v2 :is(.gt-workflow-guide span,.gt-sidebar-search kbd){font-size:max(12px,calc(12px * var(--app-font-scale,1)));}
 .gt-workspace-v2 .gt-page :is(.text-xs,.text-\[10px\],.text-\[11px\]){font-size:max(12px,calc(12px * var(--app-font-scale,1)));}
 /* Operational controls retain a usable touch target at every density. */
 .gt-workspace-v2 :is(.gt-icon-button,.gt-form-button,.gt-primary-button,.gt-main-action,.gt-hero-actions button,.gt-mobile-bottom button,.gt-sidebar-close,.gt-account>button){min-width:44px;min-height:44px;}
