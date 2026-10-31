@@ -15,6 +15,8 @@ interface JobCardProps {
   onDeleteJob: (id: string) => void;
   onUpdateJob?: (id: string, updates: Partial<PrintJob>) => void;
   language?: 'ar' | 'en';
+  readOnly?: boolean;
+  allowDelete?: boolean;
 }
 
 export const JobCard: React.FC<JobCardProps> = ({
@@ -23,6 +25,8 @@ export const JobCard: React.FC<JobCardProps> = ({
   onSelectJob,
   onDeleteJob,
   language = 'ar',
+  readOnly = false,
+  allowDelete = false,
 }) => {
   const isDone = job.status === 'done';
   const isAr = language === 'ar';
@@ -37,8 +41,8 @@ export const JobCard: React.FC<JobCardProps> = ({
     >
       {/* Top Header Row: Order ID & Actions */}
       <div className="flex items-center justify-between gap-1.5 mb-2 border-b border-zinc-800/60 pb-1.5">
-        <span className="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700/60 shrink-0">
-          #{job.id}
+        <span title={job.id} className="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700/60 shrink-0">
+          #{job.id.slice(-8).toUpperCase()}
         </span>
 
         {/* Card Actions */}
@@ -51,21 +55,21 @@ export const JobCard: React.FC<JobCardProps> = ({
           >
             <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
-          <button
+          {allowDelete && !readOnly && job.id.startsWith('crm-') && <button
             type="button"
             onClick={() => onDeleteJob(job.id)}
             className="p-1.5 sm:p-1 text-zinc-400 hover:text-rose-400 rounded-md hover:bg-rose-950/30 transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
             title={isAr ? 'حذف' : 'Delete'}
           >
             <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-          </button>
+          </button>}
         </div>
       </div>
 
       {/* Main Content: Filename & Customer Name */}
-      <div 
+      <button type="button"
         onClick={() => onSelectJob(job)}
-        className="cursor-pointer space-y-1 mb-2"
+        className="cursor-pointer space-y-1 mb-2 w-full text-start"
       >
         <div 
           className={`text-xs font-mono truncate font-bold leading-tight ${
@@ -82,7 +86,8 @@ export const JobCard: React.FC<JobCardProps> = ({
             <span className="truncate font-medium">{job.customerName}</span>
           </div>
         )}
-      </div>
+      </button>
+      {(job.priority === 'urgent' || job.priority === 'high') && <span className={'gt-priority-label gt-priority-' + job.priority}>{job.priority === 'urgent' ? (isAr ? 'عاجل' : 'Urgent') : (isAr ? 'أولوية مرتفعة' : 'High priority')}</span>}
 
       {/* Bottom Footer Row: Printer Name, Size / Quantity, Move Button */}
       <div className="flex items-center justify-between pt-1.5 border-t border-zinc-800/80 text-[11px]">
@@ -100,7 +105,7 @@ export const JobCard: React.FC<JobCardProps> = ({
           )}
         </div>
 
-        {isDone ? (
+        {!readOnly && (isDone ? (
           <button
             type="button"
             onClick={() => onMoveJob(job.id, 'pending')}
@@ -120,7 +125,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
             <span>{isAr ? 'إتمام' : 'Done'}</span>
           </button>
-        )}
+        ))}
       </div>
     </div>
   );

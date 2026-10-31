@@ -1,78 +1,36 @@
-import React, {useMemo} from 'react';
-import { Activity, ArrowUpLeft, BarChart3, MessageCircle, CheckCheck, Clock3, FileClock, Printer, UsersRound } from 'lucide-react';
+import {resolveBranding} from '../utils/branding';
+import React, {useMemo, useState} from 'react';
+import {ArrowUpLeft, ArrowLeft, ArrowRight, BarChart3, MessageCircle, CheckCheck, Clock3, FileText, Printer, UsersRound, Search, FolderOpen, Settings2, CircleCheck, AlertCircle, Layers3} from 'lucide-react';
 import type {PrintJob, ServerConfig} from '../types';
 import type {WorkspaceTab} from './ModernWorkspaceShell';
 
-type Props = {
-  jobs: PrintJob[];
-  config: ServerConfig;
-  onNavigate: (tab: WorkspaceTab) => void;
-  onSelectJob: (job: PrintJob) => void;
-};
-
-const dayLabel = (iso:string,lang:string) => {
-  const d=new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString(lang==='ar'?'ar-JO':'en-GB',{day:'numeric',month:'short'});
-};
-
-export default function WorkspaceOverview({jobs,config,onNavigate,onSelectJob}:Props){
-  const isAr=config.language!=='en';
-  const tx=(ar:string,en:string)=>isAr?ar:en;
-  const pending=jobs.filter(j=>j.status==='pending');
-  const done=jobs.filter(j=>j.status==='done');
-  const completion=jobs.length?Math.round(done.length/jobs.length*100):0;
-  const recent=useMemo(()=>[...jobs].sort((a,b)=>new Date(b.updatedAt||b.createdAt).getTime()-new Date(a.updatedAt||a.createdAt).getTime()).slice(0,7),[jobs]);
-  const printers=useMemo(()=> {
-    const counts=new Map<string,{total:number;pending:number;done:number}>();
-    (config.printers||[]).forEach(p=>counts.set(p.id,{total:0,pending:0,done:0}));
-    jobs.forEach(j=>{const curr=counts.get(j.printer)||{total:0,pending:0,done:0};curr.total++;curr[j.status==='done'?'done':'pending']++;counts.set(j.printer,curr);});
-    return [...counts.entries()].sort((a,b)=>b[1].pending-a[1].pending).slice(0,6);
-  },[jobs,config.printers]);
-  return <div className="gt-overview" dir={isAr?'rtl':'ltr'}>
-    <section className="gt-overview-hero">
-      <div className="gt-hero-copy">
-        <span className="gt-hero-eyebrow"><Activity size={14}/>{tx('ملخّص يوم العمل','YOUR DAILY WORKSPACE')}</span>
-        <h2>{tx('كل أعمال المطبعة، أمامك بوضوح.','Your print shop, all in one place.')}</h2>
-        <p>{tx('استقبل التصاميم، تابع الإنتاج، أو افتح ملف أي عميل دون البحث بين الشاشات.','Receive designs, follow production and open customer accounts without jumping between screens.')}</p>
-        <div className="gt-hero-actions">
-          <button className="gt-hero-primary" onClick={()=>onNavigate('intake')}><MessageCircle size={17}/>{tx('استلام طلب تصميم','New design request')}<ArrowUpLeft size={15}/></button>
-          <button className="gt-hero-secondary" onClick={()=>onNavigate('customers')}><UsersRound size={17}/>{tx('إدارة العملاء','Manage customers')}</button>
-        </div>
-      </div>
-      <div className="gt-hero-visual" aria-hidden="true">
-        <div className="gt-hero-ring gt-ring-one"/><div className="gt-hero-ring gt-ring-two"/>
-        <div className="gt-hero-visual-center"><Printer size={49} strokeWidth={1.55}/><span>GT</span></div>
-      </div>
-    </section>
-
-    <section className="gt-overview-stat-grid" aria-label={tx('مؤشرات الإنتاج','Production metrics')}>
-      <div className="gt-overview-stat"><span className="gt-stat-symbol gt-stat-blue"><FileClock size={20}/></span><p>{tx('طلبات اليوم','Total jobs')}</p><strong>{jobs.length}</strong><span className="gt-stat-caption">{tx('في تاريخ العمل المحدد','For the selected work date')}</span></div>
-      <div className="gt-overview-stat"><span className="gt-stat-symbol gt-stat-yellow"><Clock3 size={20}/></span><p>{tx('قيد التنفيذ','Pending jobs')}</p><strong>{pending.length}</strong><span className="gt-stat-caption">{tx('بحاجة إلى متابعة','Need your attention')}</span></div>
-      <div className="gt-overview-stat"><span className="gt-stat-symbol gt-stat-green"><CheckCheck size={20}/></span><p>{tx('تم الإنجاز','Completed')}</p><strong>{done.length}</strong><span className="gt-stat-caption">{tx('طلبات مكتملة','Finished orders')}</span></div>
-      <div className="gt-overview-stat"><span className="gt-stat-symbol gt-stat-purple"><BarChart3 size={20}/></span><p>{tx('معدل الإنجاز','Completion rate')}</p><strong>{completion}%</strong><span className="gt-stat-progress"><span style={{width:completion+'%'}}/></span></div>
-    </section>
-
-    <div className="gt-overview-columns">
-      <section className="gt-overview-panel">
-        <header className="gt-panel-heading"><div><h3>{tx('آخر أوامر الطباعة','Recent print jobs')}</h3><p>{tx('تابع حالة الملفات في جميع الطابعات','Latest activity across your printers')}</p></div><button onClick={()=>onNavigate('kanban')}>{tx('كل الأوامر','All jobs')} <ArrowUpLeft size={15}/></button></header>
-        <div className="gt-recent-list">
-          {recent.length===0?<div className="gt-empty-state"><Printer size={28}/><strong>{tx('لا توجد طلبات في هذا التاريخ','No jobs for this date')}</strong><p>{tx('ستظهر هنا أوامر الإنتاج عند إضافتها','Jobs will appear here as they are added.')}</p></div>:recent.map(j=><button className="gt-recent-row" onClick={()=>onSelectJob(j)} key={j.id}>
-            <span className="gt-recent-icon"><Printer size={19}/></span>
-            <span className="gt-recent-title"><strong title={j.filename}>{j.filename}</strong><small>{j.customerName||tx('عميل غير محدد','Unassigned customer')} · {j.printer}</small></span>
-            <span className={'gt-status-badge '+(j.status==='done'?'gt-status-done':'gt-status-pending')}>{j.status==='done'?tx('مكتمل','Done'):tx('قيد العمل','Pending')}</span>
-            <time className="gt-row-date">{dayLabel(j.updatedAt||j.createdAt,isAr?'ar':'en')}</time>
-            <ArrowUpLeft className="gt-row-arrow" size={16}/>
-          </button>)}
-        </div>
-      </section>
-      <section className="gt-overview-panel">
-        <header className="gt-panel-heading"><div><h3>{tx('نشاط الطابعات','Printer activity')}</h3><p>{tx('الأوامر المفتوحة والمكتملة حسب الطابعة','Open and completed jobs by printer')}</p></div></header>
-        <div className="gt-printer-list">{printers.length===0?<div className="gt-empty-state"><Printer size={27}/><strong>{tx('لا توجد طابعات معرفة','No printers configured')}</strong></div>:printers.map(([id,counts])=><div className="gt-printer-row" key={id}>
-          <div className="gt-printer-top"><strong>{config.printers?.find(p=>p.id===id)?.name||id}</strong><span>{counts.pending} {tx('قيد العمل','pending')} / {counts.total}</span></div>
-          <div className="gt-printer-progress"><span style={{width:(counts.total?counts.done/counts.total*100:0)+'%'}}/></div>
-        </div>)}</div>
-        <button className="gt-printer-link" onClick={()=>onNavigate('stats')}><BarChart3 size={16}/>{tx('استعراض تقارير الإنتاج','View production analytics')}<ArrowUpLeft size={16}/></button>
-      </section>
-    </div>
+type Props = {jobs: PrintJob[]; config: ServerConfig; onNavigate: (tab: WorkspaceTab) => void; onSelectJob: (job: PrintJob) => void};
+export default function WorkspaceOverview({jobs, config, onNavigate, onSelectJob}: Props) {
+  const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
+  const [query, setQuery] = useState('');
+  const isAr = config.language !== 'en';
+  const tx = (ar: string, en: string) => isAr ? ar : en;
+  const pending = jobs.filter(job => job.status === 'pending');
+  const done = jobs.filter(job => job.status === 'done');
+  const completion = jobs.length ? Math.round(done.length / jobs.length * 100) : 0;
+  const recent = useMemo(() => [...jobs].filter(job => (filter === 'all' || job.status === filter) && [job.filename, job.customerName, job.printer].join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()).slice(0, 7), [jobs, filter, query]);
+  const printers = useMemo(() => (config.printers || []).map(printer => ({...printer, pending: jobs.filter(job => job.printer === printer.id && job.status === 'pending').length, done: jobs.filter(job => job.printer === printer.id && job.status === 'done').length})).sort((a, b) => b.pending - a.pending), [jobs, config.printers]);
+  const totalPrinterJobs = printers.reduce((total, printer) => total + printer.pending + printer.done, 0);
+  const Arrow = isAr ? ArrowLeft : ArrowRight;
+  const number = (value: number) => value.toLocaleString(isAr ? 'ar-JO' : 'en-GB');
+  const metrics = [
+    {label: tx('إجمالي الملفات', 'Total files'), value: number(jobs.length), hint: tx('ضمن تاريخ العمل المحدد', 'For the selected work date'), icon: FileText, tone: 'blue'},
+    {label: tx('بانتظار الإنجاز', 'Pending production'), value: number(pending.length), hint: pending.length ? tx('جاهزة للمتابعة في لوحة الإنتاج', 'Follow up in the production board') : tx('لا توجد ملفات معلّقة', 'No pending files'), icon: Clock3, tone: 'yellow'},
+    {label: tx('ملفات منجزة', 'Completed files'), value: number(done.length), hint: tx('تم وضعها في حالة المنجز', 'Marked as completed'), icon: CheckCheck, tone: 'green'},
+    {label: tx('نسبة الإنجاز', 'Completion rate'), value: `${number(completion)}%`, hint: tx('من ملفات تاريخ العمل', 'Of files for this work date'), icon: BarChart3, tone: 'purple'},
+  ];
+  return <div className="gt-overview" dir={isAr ? 'rtl' : 'ltr'}>
+    <section className="gt-overview-hero"><div className="gt-hero-copy"><span className="gt-hero-eyebrow"><span className="gt-status-dot"/>{tx('مساحة الإنتاج اليومية', 'YOUR DAILY PRINT WORKSPACE')}<span className="gt-hero-date" dir="ltr">{config.currentDate}</span></span><h2>{tx('عمل منظّم. طباعة أفضل.', 'Clearer work. Better prints.')}</h2><p>{tx('من استلام التصميم إلى تسليم الطلب؛ تابع ما يحتاج انتباهك، وابدأ خطوتك التالية من هنا.', 'From receiving a design to delivering the order. See what needs attention and take your next step.')}</p><div className="gt-hero-actions"><button type="button" className="gt-hero-primary" onClick={() => onNavigate('kanban')}><Layers3 size={17}/>{tx('افتح لوحة الإنتاج', 'Open production board')}<Arrow size={16}/></button><button type="button" className="gt-hero-secondary" onClick={() => onNavigate('intake')}><MessageCircle size={17}/>{tx('الطلبات والتصاميم', 'Design requests')}</button></div></div><div className="gt-completion-visual"><div className="gt-completion-ring" style={{background: `conic-gradient(from 0deg, #edbd73 ${completion}%, #ffffff0f 0)`}}><div><Printer size={25}/><strong>{number(completion)}<small>%</small></strong><span>{tx('نسبة الإنجاز', 'COMPLETION')}</span></div></div><span className="gt-completion-label">{number(done.length)} / {number(jobs.length)} {tx('ملف منجز', 'files completed')}</span></div></section>
+    {!config.isRealStorageAvailable && <div className="gt-setup-banner"><span><FolderOpen size={20}/></span><div><strong>{tx('اربط مجلد الطباعة لتبدأ المتابعة المباشرة', 'Connect your print folder to see live production')}</strong><p>{tx('المسار المحفوظ غير متاح. تظهر الطلبات المسجّلة فقط حتى يصبح مجلد الإنتاج متاحًا.', 'The saved path is unavailable. Only registered orders are shown until production storage is available.')}</p></div><button type="button" onClick={() => onNavigate('settings')}>{tx('ضبط المسار', 'Set folder path')}<ArrowUpLeft size={16}/></button></div>}
+    <section className="gt-overview-stat-grid" aria-label={tx('مؤشرات الإنتاج', 'Production metrics')}>{metrics.map(({label, value, hint, icon: Icon, tone}) => <article className="gt-overview-stat" key={label}><div className="gt-stat-top"><p>{label}</p><span className={`gt-stat-symbol gt-stat-${tone}`}><Icon size={19}/></span></div><strong>{value}</strong><span className="gt-stat-caption">{hint}</span>{tone === 'purple' && <span className="gt-stat-progress"><span style={{width: completion + '%'}}/></span>}</article>)}</section>
+    <div className="gt-overview-columns"><section className="gt-overview-panel"><header className="gt-panel-heading"><div><span className="gt-section-kicker">PRODUCTION ACTIVITY</span><h3>{tx('آخر ملفات الطباعة', 'Recent print files')}</h3></div><button type="button" onClick={() => onNavigate('kanban')}>{tx('عرض الكل', 'View all')}<ArrowUpLeft size={15}/></button></header><div className="gt-recent-toolbar"><div className="gt-segmented" aria-label={tx('تصفية الملفات', 'Filter files')}>{(['all', 'pending', 'done'] as const).map(value => <button type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} key={value}>{value === 'all' ? tx('الكل', 'All') : value === 'pending' ? tx('بانتظار الإنجاز', 'Pending') : tx('منجزة', 'Completed')}</button>)}</div><label className="gt-recent-search"><Search size={16}/><input aria-label={tx('بحث في أحدث الملفات', 'Search recent files')} value={query} onChange={event => setQuery(event.target.value)} placeholder={tx('بحث…', 'Search…')}/></label></div><div className="gt-recent-list">{recent.length ? recent.map(job => <button type="button" className="gt-recent-row" key={job.id} onClick={() => onSelectJob(job)}><span className="gt-recent-icon"><FileText size={19}/></span><span className="gt-recent-title"><strong title={job.filename}>{job.filename}</strong><small>{job.customerName || tx('عميل غير محدد', 'Unassigned customer')} · {config.printers?.find(printer => printer.id === job.printer)?.name || job.printer}</small></span><span className={'gt-status-badge ' + (job.status === 'done' ? 'gt-status-done' : 'gt-status-pending')}><span/>{job.status === 'done' ? tx('منجز', 'Completed') : tx('بانتظار الإنجاز', 'Pending')}</span><ArrowUpLeft size={15} className="gt-row-arrow"/></button>) : <div className="gt-empty-state"><span className="gt-empty-icon"><FileText size={27}/></span><strong>{query || filter !== 'all' ? tx('لا توجد ملفات مطابقة', 'No matching files') : tx('جاهز لأول ملف طباعة', 'Ready for your first print file')}</strong><p>{query || filter !== 'all' ? tx('غيّر البحث أو التصفية لعرض ملفات أخرى.', 'Try a different search or filter.') : tx('ستظهر الملفات هنا عند ربط مجلد الإنتاج أو تسجيل طلب.', 'Files appear when you connect production storage or register an order.')}</p><button type="button" className="gt-empty-action" onClick={() => query || filter !== 'all' ? (setQuery(''), setFilter('all')) : onNavigate('intake')}>{query || filter !== 'all' ? tx('مسح التصفية', 'Clear filters') : tx('افتح الطلبات', 'Open requests')}<Arrow size={15}/></button></div>}</div></section>
+      <div className="gt-overview-side"><section className="gt-overview-panel"><header className="gt-panel-heading"><div><span className="gt-section-kicker">PRINTER WORKLOAD</span><h3>{tx('توزيع العمل', 'Printer workload')}</h3></div><Printer size={18}/></header>{printers.length ? <div className="gt-workload-list">{printers.slice(0, 6).map((printer, index) => <button type="button" key={printer.id} onClick={() => onNavigate('kanban')} className="gt-workload-row"><div><span className="gt-printer-dot" style={{background: ['#e9b766', '#85a7e9', '#6ac9b2', '#b59ae4', '#e894a4', '#93c4d5'][index]}}/><strong>{printer.name}</strong><small>{number(printer.pending)} {tx('بالانتظار', 'pending')}</small></div><span className="gt-workload-track"><span style={{width: `${totalPrinterJobs ? (printer.pending + printer.done) / totalPrinterJobs * 100 : 0}%`, background: ['#e9b766', '#85a7e9', '#6ac9b2', '#b59ae4', '#e894a4', '#93c4d5'][index]}}/></span></button>)}</div> : <div className="gt-empty-state"><Printer size={27}/><strong>{tx('أضف طابعات المطبعة', 'Add your printers')}</strong><button type="button" className="gt-empty-action" onClick={() => onNavigate('management')}>{tx('إدارة الطابعات', 'Manage printers')}<Arrow size={15}/></button></div>}<footer className="gt-panel-footer"><span>{number(printers.length)} {tx('طابعات مسجّلة', 'configured printers')}</span><button type="button" onClick={() => onNavigate('management')}><Settings2 size={14}/>{tx('إدارة', 'Manage')}</button></footer></section><section className="gt-quick-actions"><h3>{tx('خطوتك التالية', 'Your next step')}</h3>{[{tab: 'intake' as const, ar: 'استلام ومتابعة التصاميم', en: 'Receive & track designs', icon: MessageCircle}, {tab: 'customers' as const, ar: 'العملاء والفواتير', en: 'Customers & invoices', icon: UsersRound}, {tab: 'stats' as const, ar: 'قراءة تقارير الإنتاج', en: 'Explore production reports', icon: BarChart3}].map(({tab, ar, en, icon: Icon}) => <button type="button" key={tab} onClick={() => onNavigate(tab)}><span><Icon size={18}/></span><strong>{tx(ar, en)}</strong><ArrowUpLeft size={15}/></button>)}</section></div>
+    </div><footer className="gt-overview-footer"><span><ShieldStatus available={config.isRealStorageAvailable}/>{config.isRealStorageAvailable ? tx('الملفات من مجلد الإنتاج المحفوظ', 'Files from your saved production folder') : tx('بانتظار اتصال مجلد الإنتاج', 'Waiting for production storage')}</span><span>{resolveBranding(config.branding).name} · PRINT WORKSPACE</span></footer>
   </div>;
 }
+function ShieldStatus({available}: {available: boolean}) {return available ? <CircleCheck size={14}/> : <AlertCircle size={14}/>;}

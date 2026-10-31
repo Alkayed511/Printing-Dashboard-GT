@@ -1,7 +1,8 @@
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import { MessageCircle, UsersRound, Plus, Download, ArrowUpLeft, Search, RefreshCw, FilePlus2,
   Printer, PencilLine, Link2, Clock3, CheckCircle2, FolderOpen, Save, UserRoundPlus } from 'lucide-react';
-import {whatsappUrl} from '../utils/whatsapp';
+import {whatsappUrl,normalizeWhatsApp} from '../utils/whatsapp';
+import {parseContactsCsv} from '../utils/contactCsv';
 import type {PrintJob,ServerConfig} from '../types';
 import type {Customer,ManagementData} from '../types/management';
 import type {IncomingMessage,IntakeRequest,IntakeStatus} from '../server/intakeStore';
@@ -33,6 +34,7 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
   const [selectedMessage,setSelectedMessage]=useState('');
   const [selectedRequest,setSelectedRequest]=useState('');
   const [newCustomer,setNewCustomer]=useState({name:'',phone:''});
+  const [importSummary,setImportSummary]=useState('');
   const [newOrder,setNewOrder]=useState({customerId:'',title:'',notes:'',sourceMessageId:''});
   const [revision,setRevision]=useState({fileName:'',dimensions:'',printer:'',notes:''});
   const [linkSelection,setLinkSelection]=useState<string[]>([]);
@@ -61,6 +63,8 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
   }
   const customerName=(id:string)=>customers.find(c=>c.id===id)?.name||'عميل غير مرتبط';
   const customerPhone=(id:string)=>customers.find(c=>c.id===id)?.whatsapp||customers.find(c=>c.id===id)?.phone||'';
+  const existingCustomer=customers.find(c=>Boolean(normalizeWhatsApp(newCustomer.phone))&&
+    (normalizeWhatsApp(c.whatsapp)===normalizeWhatsApp(newCustomer.phone)||normalizeWhatsApp(c.phone)===normalizeWhatsApp(newCustomer.phone)));
   const selectedMsg=intake.messages.find(m=>m.id===selectedMessage);
   const current=intake.requests.find(r=>r.id===selectedRequest);
   const activeLinks=current?.linkedFiles||[];
@@ -115,10 +119,37 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
       <div className="flex flex-col sm:flex-row gap-2">
         <input className={control} aria-label="اسم العميل" placeholder="اسم العميل أو الشركة" value={newCustomer.name} onChange={e=>setNewCustomer(s=>({...s,name:e.target.value}))}/>
         <input className={control} dir="ltr" aria-label="رقم واتساب" placeholder="+96279..." value={newCustomer.phone} onChange={e=>setNewCustomer(s=>({...s,phone:e.target.value}))}/>
-        <button disabled={busy||!newCustomer.name.trim()} className={primary+' whitespace-nowrap'} onClick={()=>action(async()=>{
+        <button disabled={busy||!newCustomer.name.trim()||!!existingCustomer} className={primary+' whitespace-nowrap'} onClick={()=>action(async()=>{
           const saved=await request<Customer>('/api/management/customers','POST',{name:newCustomer.name,phone:newCustomer.phone,whatsapp:newCustomer.phone,contact:'',email:'',address:'',taxNumber:'',category:'',paymentTerms:'',creditLimit:0,notes:''});
           setNewCustomer({name:'',phone:''});setNewOrder(s=>({...s,customerId:saved.id}));
         },'تمت إضافة العميل')}>حفظ العميل</button>
+      </div>
+      {existingCustomer&&<p className="text-amber-300 text-sm mt-2">رقم الهاتف مرتبط بالعميل {existingCustomer.name}.
+        <button className={btn+' mx-2'} onClick={()=>setNewOrder(v=>({...v,customerId:existingCustomer.id}))}>اختيار العميل الموجود</button>
+      </p>}
+      <div className="mt-4 rounded-xl border border-slate-700 p-3 space-y-2">
+        <h4 className="text-sm font-bold">استيراد أرقام عملاء المطبعة من CSV</h4>
+        <p className="text-xs text-slate-400">يمكن استيراد ملف جهات اتصال الهاتف (Name, Phone). الأرقام المكررة تُطابق مع العملاء الحاليين، والأسماء المتعارضة تحتاج إلى مراجعة.</p>
+        <input type="file" accept=".csv,text/csv" disabled={busy} aria-label="CSV جهات الاتصال" className="text-sm w-full"
+          onChange={async e=>{
+            const file=e.target.files?.[0];
+            e.target.value='';
+            if(!file)return;
+            setBusy(true);setError('');setImportSummary('');
+            try {
+              const contacts=parseContactsCsv(await file.text());
+              if(!contacts.length)throw Error('الملف فارغ');
+              const result=await request<{results:{name:string;phone:string;result:string}[]}>('/api/management/customers/contacts/import','POST',{contacts});
+              await refresh();
+              const added=result.results.filter(x=>x.result==='تمت الإضافة').length;
+              const matched=result.results.filter(x=>x.result==='موجود حسب الرقم').length;
+              const review=result.results.filter(x=>x.result.includes('راجع يدوياً'));
+              setImportSummary('جديد: '+added+' | موجود: '+matched+' | مراجعة: '+review.length+
+                (review.length?' — '+review.slice(0,5).map(x=>x.name).join('، '):''));
+            }catch(err){setError(err instanceof Error?err.message:String(err));}
+            finally{setBusy(false);}
+          }}/>
+        {importSummary&&<p className="text-xs text-emerald-200" role="status">{importSummary}</p>}
       </div>
     </section>
 

@@ -6,13 +6,15 @@ import { PushToTalk } from './PushToTalk';
 
 interface ManagementTabProps {
   config: ServerConfig;
-  onSaveConfig: (newConfig: ServerConfig) => void;
+  onSaveConfig: (newConfig: ServerConfig) => Promise<boolean>;
   language: 'ar' | 'en';
 }
 
 export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConfig, language }) => {
   const [departments, setDepartments] = useState<Department[]>(config.departments || []);
   const [printers, setPrinters] = useState<Printer[]>(config.printers || []);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   React.useEffect(() => {
     setDepartments(config.departments || []);
@@ -21,12 +23,23 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
 
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
+  const [originalPrinterId, setOriginalPrinterId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{type: 'dept' | 'printer', id: string} | null>(null);
 
   const isAr = language === 'ar';
 
-  const handleSaveConfig = (newDepts: Department[], newPrinters: Printer[]) => {
-    onSaveConfig({ ...config, departments: newDepts, printers: newPrinters });
+  const handleSaveConfig = async (newDepts: Department[], newPrinters: Printer[]) => {
+    if (saving) return false;
+    setSaving(true); setSaveError('');
+    try {
+      const success = await onSaveConfig({ ...config, departments: newDepts, printers: newPrinters });
+      if (!success) throw new Error();
+      setDepartments(newDepts); setPrinters(newPrinters);
+      return true;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : (isAr ? 'تعذّر حفظ التعديلات. لم يتم تغيير الأقسام أو الطابعات.' : 'Could not save. Departments and printers have not changed.'));
+      return false;
+    } finally {setSaving(false);}
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -44,7 +57,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
     const sourceDeptId = source.droppableId;
     const destDeptId = destination.droppableId;
 
-    const newPrinters = [...printers];
+    const newPrinters = printers.map(printer => ({...printer}));
     const printersByDept: Record<string, Printer[]> = {};
     departments.forEach(d => {
       printersByDept[d.id] = newPrinters.filter(p => p.departmentId === d.id);
@@ -62,16 +75,16 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
     const orphans = newPrinters.filter(p => !departments.find(d => d.id === p.departmentId));
     finalPrinters.push(...orphans);
 
-    setPrinters(finalPrinters);
-    handleSaveConfig(departments, finalPrinters);
+    void handleSaveConfig(departments, finalPrinters);
   };
 
   // Departments Handlers
   const handleAddDept = () => {
+    setSaveError('');
     setEditingDept({ id: `dept-${Date.now()}`, name: '' });
   };
 
-  const handleSaveDept = () => {
+  const handleSaveDept = async () => {
     if (!editingDept || !editingDept.name.trim()) return;
     let newDepts;
     if (departments.some(d => d.id === editingDept.id)) {
@@ -79,9 +92,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
     } else {
       newDepts = [...departments, editingDept];
     }
-    setDepartments(newDepts);
-    handleSaveConfig(newDepts, printers);
-    setEditingDept(null);
+    if (await handleSaveConfig(newDepts, printers)) setEditingDept(null);
   };
 
   const handleDeleteDept = (id: string) => {
@@ -89,44 +100,43 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
   };
 
   // Printers Handlers
-  const handleSavePrinter = () => {
+  const handleSavePrinter = async () => {
     if (!editingPrinter || !editingPrinter.name.trim() || !editingPrinter.departmentId) return;
+    if (!originalPrinterId && printers.some(printer => printer.id.toLowerCase() === editingPrinter.id.trim().toLowerCase())) {setSaveError(isAr ? 'يوجد معرّف طابعة مطابق. اختر اسم مجلد غير مكرر.' : 'This printer folder ID is already in use.'); return;}
+    const printer = {...editingPrinter, id: editingPrinter.id.trim(), name: editingPrinter.name.trim()};
     let newPrinters;
-    if (printers.some(p => p.id === editingPrinter.id)) {
-      newPrinters = printers.map(p => p.id === editingPrinter.id ? editingPrinter : p);
+    if (originalPrinterId) {
+      newPrinters = printers.map(p => p.id === originalPrinterId ? printer : p);
     } else {
-      newPrinters = [...printers, editingPrinter];
+      newPrinters = [...printers, printer];
     }
-    setPrinters(newPrinters);
-    handleSaveConfig(departments, newPrinters);
-    setEditingPrinter(null);
+    if (await handleSaveConfig(departments, newPrinters)) setEditingPrinter(null);
   };
 
   const handleDeletePrinter = (id: string) => {
     setDeleteConfirm({ type: 'printer', id });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteConfirm) return;
     
     if (deleteConfirm.type === 'dept') {
       const newDepts = departments.filter(d => d.id !== deleteConfirm.id);
       const newPrinters = printers.filter(p => p.departmentId !== deleteConfirm.id);
-      setDepartments(newDepts);
-      setPrinters(newPrinters);
-      handleSaveConfig(newDepts, newPrinters);
+      if (!await handleSaveConfig(newDepts, newPrinters)) return;
     } else {
       const newPrinters = printers.filter(p => p.id !== deleteConfirm.id);
-      setPrinters(newPrinters);
-      handleSaveConfig(departments, newPrinters);
+      if (!await handleSaveConfig(departments, newPrinters)) return;
     }
     setDeleteConfirm(null);
   };
 
   return (
     <div className={`max-w-5xl mx-auto p-4 sm:p-6 space-y-6 ${isAr ? 'dir-rtl' : 'dir-ltr'}`}>
+      {saveError && <p role="alert" className="gt-settings-error">{saveError}</p>}
+      {saving && <p role="status" className="text-sm text-amber-200">{isAr ? 'جارٍ حفظ التعديلات…' : 'Saving changes…'}</p>}
       {/* Live Voice Broadcast / Push To Talk Section */}
-      <PushToTalk departments={departments} language={language} />
+      <details className="gt-voice-settings"><summary>{isAr ? 'التواصل الصوتي بين الأقسام · اختياري' : 'Voice communication between departments · optional'}</summary><PushToTalk departments={departments} language={language} /></details>
 
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -203,11 +213,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
                                         <span className="text-[10px] text-zinc-500 font-mono">{printer.id}</span>
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button onClick={() => setEditingPrinter(printer)} className="p-1.5 text-zinc-400 hover:text-primary-400 hover:bg-zinc-900 rounded-md transition-colors">
+                                    <div className="flex items-center gap-1 opacity-100 transition-opacity">
+                                      <button aria-label={isAr ? `تعديل ${printer.name}` : `Edit ${printer.name}`} disabled={saving} onClick={() => {setOriginalPrinterId(printer.id); setEditingPrinter({...printer}); setSaveError('');}} className="p-1.5 text-zinc-400 hover:text-primary-400 hover:bg-zinc-900 rounded-md transition-colors">
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 rounded-md transition-colors">
+                                      <button aria-label={isAr ? `حذف إعداد الطابعة ${printer.name}` : `Remove printer configuration ${printer.name}`} disabled={saving} onClick={() => handleDeletePrinter(printer.id)} className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 rounded-md transition-colors">
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </div>
@@ -230,7 +240,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
 
                 <button
                   onClick={() => {
-                    setEditingPrinter({ id: `printer-${Date.now()}`, name: '', departmentId: dept.id });
+                    setOriginalPrinterId(null); setSaveError('');
+                    setEditingPrinter({ id: '', name: '', departmentId: dept.id });
                   }}
                   className="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white px-3 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm group"
                 >
@@ -263,6 +274,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
               </button>
             </div>
             <div className="p-4 space-y-4">
+              {saveError && <p role="alert" className="gt-settings-error">{saveError}</p>}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-400">{isAr ? 'اسم القسم' : 'Department Name'}</label>
                 <input
@@ -310,14 +322,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
                 <input
                   type="text"
                   value={editingPrinter.id}
-                  onChange={(e) => setEditingPrinter({ ...editingPrinter, id: e.target.value.replace(/[^a-zA-Z0-9_-]/g, '') })}
-                  disabled={printers.some(p => p.id === editingPrinter.id) && editingPrinter.id !== `printer-${Date.now()}`}
+                  onChange={(e) => setEditingPrinter({ ...editingPrinter, id: e.target.value.replace(/[\\/:*?"<>|\x00-\x1f]/g, '') })}
+                  disabled={originalPrinterId !== null || saving}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500 transition-colors disabled:opacity-60 dir-ltr font-mono text-left"
                   placeholder="e.g. eco1"
                 />
-                <p className="text-[10px] text-zinc-500">{isAr ? 'يستخدم لإنشاء المجلدات. أحرف إنجليزية وأرقام فقط.' : 'Used for folder creation. English letters and numbers only.'}</p>
+                <p className="text-[10px] text-zinc-500">{isAr ? 'اكتب اسم مجلد الطابعة، مثل eco أو flat small. عند الحفظ يُنشأ المجلد الناقص وداخله done ضمن تاريخ العمل. يبقى المعرّف ثابتًا، ولا تُعاد تسمية المجلدات الموجودة.' : 'Enter the printer folder name, such as eco or flat small. Saving creates its missing folder and done subfolder under the work date. Saved IDs stay fixed; existing folders are not renamed.'}</p>
               </div>
               <div className="space-y-1.5">
+                {saveError && <p role="alert" className="gt-settings-error">{saveError}</p>}
                 <label className="text-xs font-bold text-zinc-400">{isAr ? 'اسم الطابعة المعروض' : 'Display Name'}</label>
                 <input
                   type="text"
@@ -350,7 +363,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
               </button>
               <button
                 onClick={handleSavePrinter}
-                disabled={!editingPrinter.name.trim() || !editingPrinter.departmentId || !editingPrinter.id.trim()}
+                disabled={saving || !editingPrinter.name.trim() || !editingPrinter.departmentId || !editingPrinter.id.trim()}
                 className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
