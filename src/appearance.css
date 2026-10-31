@@ -74,6 +74,8 @@ html{font-size:calc(16px * var(--app-font-scale,1));}
 @media(max-width:760px){.gt-notifications-dialog{margin:7dvh auto 0;}.gt-workspace-v2 .gt-header-actions .gt-appearance-shortcut{display:none;}.gt-customizer-heading h3{font-size:calc(25px * var(--app-font-scale,1))!important;}.gt-design-card{padding:19px;}.gt-appearance-presets strong{font-size:calc(11px * var(--app-font-scale,1));}.gt-customizer-heading p{font-size:calc(11px * var(--app-font-scale,1));}.gt-live-preview{margin-top:2px;}.gt-preview-caption small{font-size:calc(8px * var(--app-font-scale,1));}.gt-designer-colors{gap:9px;}.gt-designer-colors label{font-size:calc(10px * var(--app-font-scale,1));}.gt-logo-stage{width:72px;height:72px;}.gt-preview-brand .gt-brand-mark{width:min(var(--app-logo-size),55px);height:min(var(--app-logo-size),55px);}.gt-auth-mobile-brand .gt-brand-mark{width:38px;height:38px;}.gt-customizer .gt-settings-grid{grid-template-columns:1fr;}}
 /* Business metadata and primary actions share the saved, contrasting palette. */
 .gt-workspace-v2 .gt-mobile-bottom button:not([aria-current=page]){color:var(--app-muted);}
+.gt-workspace-v2 :is(.gt-sidebar-search kbd,.gt-workflow-guide span){color:var(--app-muted);}
+.gt-workspace-v2 .gt-workflow-guide span:first-child{color:var(--app-text);background:color-mix(in srgb,var(--app-accent) 12%,var(--app-surface));}
 [data-theme=light] .gt-workspace-v2 .gt-page :is(.bg-amber-950,.bg-amber-950\/20,.bg-amber-950\/30,.bg-amber-950\/40){background:#fff1dc!important;}
 [data-theme=light] .gt-workspace-v2 .gt-page :is(.bg-emerald-950,.bg-emerald-950\/40){background:#e3f4eb!important;}
 [data-theme=light] .gt-workspace-v2 .gt-page .text-emerald-200{color:#236a4a!important;}
