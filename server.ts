@@ -5,6 +5,11 @@ import {listLedger,reconcileLedger,updateLedgerRow} from './src/server/productio
 import { attachManagementRoutes, resolveWhatsappCustomer } from './src/server/management';
 import { mountWhatsAppWebhook, mountIntakeRoutes } from './src/server/whatsapp';
 import { readServerSettings, writeServerSettings, readLocalState, writeLocalState } from './src/server/sqliteStore';
+import {updateServerConfig, inspectProductionStorage} from './src/server/serverConfig';
+import {productionSettings} from './src/utils/production';
+import {moveProductionFile} from './src/server/productionFiles';
+import {resolveBranding} from './src/utils/branding';
+import {ensureProductionFolders, productionFoldersRequested} from './src/server/productionFolders';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -22,7 +27,8 @@ if (fs.existsSync(firebaseConfigPath)) {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('PORT must be a valid TCP port');
 // Webhook must receive raw bytes before express.json and before the authentication guard.
 mountWhatsAppWebhook(app,resolveWhatsappCustomer);
 
@@ -54,8 +60,12 @@ mountIntakeRoutes(app,management.guard,management.linkJob,(req)=>{
   const day=serverConfig.currentDate;
   const files=checkDiskStorage(serverConfig.basePath,day)
     ? scanDateDirectory(path.join(serverConfig.basePath,day))
-    : mockJobs;
+    : [];
   return [...files.map(j=>management.decorate({...j,...(jobOverrides[j.id]||{})})),...management.getOrders(req)];
+});
+app.get('/api/branding', (_req, res) => {
+  res.set('Cache-Control','no-cache');
+  res.json({branding:resolveBranding(serverConfig.branding)});
 });
 app.use('/api', management.guard);
 
@@ -500,6 +510,7 @@ app.post('/api/voice-notes/clear', (req: Request, res: Response) => {
 
 // API Routes
 app.get('/api/config', (req: Request, res: Response) => {
+  res.set('Cache-Control','private, no-cache');
   const isAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = isAvailable;
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
@@ -507,52 +518,33 @@ app.get('/api/config', (req: Request, res: Response) => {
 });
 
 app.post('/api/config', async (req: Request, res: Response) => {
-  const { basePath, currentDate, autoRefreshInterval, notificationSound, notificationColor, notificationDuration, disableMouseInDisplayMode, themeColor } = req.body;
-  if (basePath !== undefined) serverConfig.basePath = basePath;
-  if (currentDate !== undefined) serverConfig.currentDate = currentDate;
-  if (autoRefreshInterval !== undefined) serverConfig.autoRefreshInterval = Number(autoRefreshInterval);
-  if (notificationSound !== undefined) serverConfig.notificationSound = notificationSound;
-  if (notificationColor !== undefined) serverConfig.notificationColor = notificationColor;
-  if (notificationDuration !== undefined) serverConfig.notificationDuration = Number(notificationDuration);
-  if (disableMouseInDisplayMode !== undefined) serverConfig.disableMouseInDisplayMode = Boolean(disableMouseInDisplayMode);
-  if (themeColor !== undefined) serverConfig.themeColor = themeColor;
-  if (req.body.secondaryColor !== undefined) serverConfig.secondaryColor = req.body.secondaryColor;
-  if (req.body.customSoundUrl !== undefined) serverConfig.customSoundUrl = req.body.customSoundUrl;
-  if (req.body.language !== undefined) serverConfig.language = req.body.language;
-  if (req.body.localIp !== undefined) serverConfig.localIp = req.body.localIp;
-  if (req.body.departments !== undefined) serverConfig.departments = req.body.departments;
-  if (req.body.printers !== undefined) serverConfig.printers = req.body.printers;
-
-  serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
-  serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
-
-  // If real path exists, create printer folders if missing
-  if (serverConfig.isRealStorageAvailable) {
-    try {
-      const dateDir = serverConfig.activePath;
-      if (!fs.existsSync(dateDir)) {
-        fs.mkdirSync(dateDir, { recursive: true });
-      }
-      const printerIds = serverConfig.printers?.map(p => p.id) || [];
-      printerIds.forEach((p) => {
-        const printerDir = path.join(dateDir, p);
-        const doneDir = path.join(printerDir, 'done');
-        if (!fs.existsSync(printerDir)) fs.mkdirSync(printerDir, { recursive: true });
-        if (!fs.existsSync(doneDir)) fs.mkdirSync(doneDir, { recursive: true });
-      });
-    } catch (err) {
-      console.error('Error creating network folder structure:', err);
+  let candidate: ServerConfig;
+  try {candidate = updateServerConfig(serverConfig, req.body);}
+  catch (error) {res.status(400).json({error: error instanceof Error ? error.message : 'إعدادات غير صالحة'}); return;}
+  candidate.activePath = path.join(candidate.basePath, candidate.currentDate);
+  if (req.body.initializeProductionFolders !== undefined && typeof req.body.initializeProductionFolders !== 'boolean') {res.status(400).json({error:'خيار إنشاء المجلدات غير صالح'}); return;}
+  let createdFolders = 0;
+  if (productionFoldersRequested(serverConfig,candidate,req.body.initializeProductionFolders === true)) {
+    try {createdFolders = ensureProductionFolders(candidate).createdCount;}
+    catch (error) {
+      const known = error instanceof Error && !('code' in error);
+      res.status(409).json({error:known ? error.message : 'تعذّر إنشاء مجلدات الطابعات. تحقق من المسار وصلاحيات الكتابة؛ لم تُحفظ الإعدادات.'}); return;
     }
   }
+  candidate.isRealStorageAvailable = checkDiskStorage(candidate.basePath, candidate.currentDate);
+  try {writeServerSettings(candidate as unknown as Record<string,unknown>);}
+  catch {res.status(500).json({error:'تعذّر حفظ الإعدادات. بقيت الإعدادات السابقة فعّالة.'}); return;}
+  serverConfig = candidate;
+  if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') setDoc(doc(db, 'settings', 'global'), serverConfig).catch(() => console.error('Legacy settings sync failed'));
+  res.json({ success: true, createdFolders, config: { ...serverConfig, localIp: getLocalIp() } });
+});
 
-  if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') {
-    setDoc(doc(db, 'settings', 'global'), serverConfig).catch((err) => {
-      console.error('Error saving config to Firestore:', err);
-    });
-  }
-
-  writeServerSettings(serverConfig as unknown as Record<string,unknown>);
-  res.json({ success: true, config: { ...serverConfig, localIp: getLocalIp() } });
+app.post('/api/production/storage/check', (req: Request, res: Response) => {
+  try {
+    const candidate = updateServerConfig(serverConfig, {basePath: req.body?.basePath, currentDate: req.body?.currentDate});
+    res.set('Cache-Control', 'no-store');
+    res.json(inspectProductionStorage(candidate.basePath, candidate.currentDate, candidate.printers || []));
+  } catch (error) {res.status(400).json({error: error instanceof Error ? error.message : 'تعذّر فحص المسار'});}
 });
 
 function observeScannedProduction(day:string,jobs:PrintJob[]){
@@ -602,90 +594,40 @@ app.get('/api/files', (req: Request, res: Response) => {
     res.json({ jobs: [...jobsWithOverrides, ...management.getOrders(req)], isRealStorage: true, scannedPath: dateDir });
 
   } else {
-    // Return mock database filtered or simulated
-    const jobsWithOverrides = mockJobs.map(j => management.decorate({ ...j, ...(jobOverrides[j.id] || {}) }));
-    res.json({ jobs: [...jobsWithOverrides, ...management.getOrders(req)], isRealStorage: false, scannedPath: path.join(serverConfig.basePath, selectedDate) });
+    // An unavailable production folder must not turn sample files into apparent real work.
+    res.json({ jobs: management.getOrders(req), isRealStorage: false, scannedPath: path.join(serverConfig.basePath, selectedDate) });
   }
 });
 
 // POST /api/files/move - Move file between pending and done
 app.post('/api/files/move', (req: Request, res: Response) => {
-  const { id, targetStatus, printer: reqPrinter, filename: reqFilename } = req.body as {
-    id: string;
-    targetStatus: FileStatus;
-    printer?: PrinterType;
-    filename?: string;
-  };
-
+  const {id, targetStatus, printer} = req.body || {};
+  if (typeof id !== 'string' || !['pending','done'].includes(targetStatus) || (printer !== undefined && !serverConfig.printers?.some(item => item.id === printer))) {
+    res.status(400).json({error:'طلب نقل أو طابعة هدف غير صالحة'}); return;
+  }
   if (management.isManagedOrder(id)) {
-    if (targetStatus !== 'done' && targetStatus !== 'pending') return res.status(400).json({error:'Invalid status'});
-    management.updateOrder(id,{status:targetStatus, ...(reqPrinter ? {printer:reqPrinter} : {})});
-    return res.json({success:true, fileMovedOnDisk:false});
+    management.updateOrder(id, {status: targetStatus, ...(printer ? {printer} : {})});
+    res.json({success:true, fileMovedOnDisk:false}); return;
   }
-  let filename = reqFilename || '';
-  let printer: PrinterType = reqPrinter || 'eco';
-  let foundInMock = false;
-
-  const jobIndex = mockJobs.findIndex((j) => j.id === id);
-  if (jobIndex !== -1) {
-    foundInMock = true;
-    mockJobs[jobIndex].status = targetStatus;
-    mockJobs[jobIndex].updatedAt = new Date().toISOString();
-    if (!filename) filename = mockJobs[jobIndex].filename;
-    if (reqPrinter) mockJobs[jobIndex].printer = reqPrinter;
-    if (!reqPrinter) printer = mockJobs[jobIndex].printer;
-  } else {
-    if (!filename || !printer) {
-      return res.status(400).json({ error: 'Filename and printer are required for real files' });
-    }
-  }
-
-  if (!jobOverrides[id]) {
-    jobOverrides[id] = {};
-  }
-  jobOverrides[id].status = targetStatus;
-  if (reqPrinter) {
-    jobOverrides[id].printer = reqPrinter;
-  }
-  jobOverrides[id].updatedAt = new Date().toISOString();
-
-  // Attempt physical file move on disk
-  const dateDir = path.join(serverConfig.basePath, serverConfig.currentDate);
-  const printerDir = path.join(dateDir, printer);
-  const doneDir = path.join(printerDir, 'done');
-
-  let fileMovedOnDisk = false;
-
-
+  if (!checkDiskStorage(serverConfig.basePath, serverConfig.currentDate)) {res.status(409).json({error:'مجلد الإنتاج غير متاح؛ لم يتم نقل الملف'}); return;}
   try {
-    if (filename) {
-      if (!fs.existsSync(printerDir)) fs.mkdirSync(printerDir, { recursive: true });
-      if (!fs.existsSync(doneDir)) fs.mkdirSync(doneDir, { recursive: true });
-
-      const pendingFilePath = path.join(printerDir, filename);
-      const doneFilePath = path.join(doneDir, filename);
-
-      if (targetStatus === 'done') {
-        if (fs.existsSync(pendingFilePath)) {
-          fs.renameSync(pendingFilePath, doneFilePath);
-          fileMovedOnDisk = true;
-        }
-      } else if (targetStatus === 'pending') {
-        if (fs.existsSync(doneFilePath)) {
-          fs.renameSync(doneFilePath, pendingFilePath);
-          fileMovedOnDisk = true;
-        }
-      }
+    const dateDir = path.join(serverConfig.basePath, serverConfig.currentDate);
+    const job = scanDateDirectory(dateDir).find(item => item.id === id);
+    if (!job) {res.status(404).json({error:'الملف غير موجود في تاريخ العمل الحالي؛ حدّث اللوحة'}); return;}
+    const destination = printer || job.printer;
+    const result = moveProductionFile(dateDir, job, targetStatus, destination);
+    const nextId = getOrderId(serverConfig.currentDate, destination, job.filename);
+    const overrides = {...jobOverrides[id], updatedAt:new Date().toISOString()};
+    if (nextId !== id) {
+      const customerId = management.decorate(job).customerId;
+      if (customerId) management.linkJob(nextId, customerId);
+      delete jobOverrides[id];
     }
-  } catch (e) {
-    console.error('Real filesystem move error:', e);
-  }
-
-  return res.json({
-    success: true,
-    fileMovedOnDisk,
-    updatedJob: foundInMock ? mockJobs[jobIndex] : undefined,
-  });
+    // Status and printer are read from disk, never simulated after a failed move.
+    delete overrides.status; delete overrides.printer;
+    jobOverrides[nextId] = overrides;
+    res.json({success:true, fileMovedOnDisk:result.moved});
+  } catch (error) {res.status(409).json({error:error instanceof Error ? error.message : 'تعذّر نقل الملف؛ تحقق من صلاحيات المجلد'});}
 });
 
 // PUT /api/files/:id - Update job metadata
@@ -724,6 +666,7 @@ app.put('/api/files/:id', (req: Request, res: Response) => {
 
 // DELETE /api/files/:id - Delete an order file
 app.delete('/api/files/:id', (req: Request, res: Response) => {
+  if (!productionSettings(serverConfig.production).allowFileDeletion) {res.status(403).json({error:'حذف الطلبات معطّل في إعدادات الإنتاج'}); return;}
   const { id } = req.params;
   if (management.isManagedOrder(id)) return res.json({success:management.removeOrder(id)});
   const initialLen = mockJobs.length;

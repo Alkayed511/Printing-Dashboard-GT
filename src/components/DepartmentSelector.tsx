@@ -1,6 +1,8 @@
 import React from 'react';
 import { ServerConfig, Department } from '../types';
 import { LayoutDashboard, LogIn, MonitorSmartphone, Printer as PrinterIcon } from 'lucide-react';
+import {useBranding} from './BrandingProvider';
+import BrandMark from './BrandMark';
 
 interface DepartmentSelectorProps {
   onSelect: (deptId: string | 'all') => void;
@@ -9,11 +11,13 @@ interface DepartmentSelectorProps {
 }
 
 export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({ onSelect, language, config }) => {
+  const {branding} = useBranding();
   const departments = config.departments || [];
   
   return (
     <div className="gt-department-screen min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
       <div className="max-w-3xl w-full space-y-8">
+        <div className="gt-department-brand"><BrandMark branding={branding}/><strong>{branding.name}</strong></div>
         
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center p-4 bg-emerald-500/10 rounded-full mb-2">
