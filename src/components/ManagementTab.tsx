@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ServerConfig, Department, Printer } from '../types';
 import { Plus, Edit2, Trash2, Printer as PrinterIcon, LayoutDashboard, Save, X, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { PushToTalk } from './PushToTalk';
 
 interface ManagementTabProps {
   config: ServerConfig;
@@ -125,8 +124,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
 
   return (
     <div className={`max-w-5xl mx-auto p-4 sm:p-6 space-y-6 ${isAr ? 'dir-rtl' : 'dir-ltr'}`}>
-      {/* Live Voice Broadcast / Push To Talk Section */}
-      <PushToTalk departments={departments} language={language} />
 
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
