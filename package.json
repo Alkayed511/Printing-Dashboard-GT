@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
-    "test:management": "node --experimental-strip-types src/utils/printMath.test.ts && node --experimental-strip-types src/server/sqliteStore.test.ts && node --experimental-strip-types src/utils/whatsapp.test.ts && node --experimental-strip-types src/server/intakeStore.test.ts && node --experimental-strip-types src/server/intakeLinks.test.ts && node --experimental-strip-types src/server/productionLedger.test.ts && node --experimental-strip-types src/utils/contactCsv.test.ts"
+    "test:management": "node --experimental-strip-types src/utils/printMath.test.ts && node --experimental-strip-types src/server/sqliteStore.test.ts && node --experimental-strip-types src/utils/whatsapp.test.ts && node --experimental-strip-types src/server/intakeStore.test.ts && node --experimental-strip-types src/server/intakeLinks.test.ts && node --experimental-strip-types src/server/productionLedger.test.ts && node --experimental-strip-types src/utils/contactCsv.test.ts && node --experimental-strip-types src/server/adminPin.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
