@@ -48,6 +48,7 @@ export interface PrinterInfo {
 export interface ServerConfig {
   basePath: string;
   currentDate: string;
+  autoDailyFolders?: boolean;
   autoRefreshInterval: number; // in seconds, 0 = off
   isRealStorageAvailable: boolean;
   activePath: string;

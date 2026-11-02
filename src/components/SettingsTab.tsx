@@ -17,6 +17,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 }) => {
   const [basePath, setBasePath] = useState(config.basePath);
   const [currentDate, setCurrentDate] = useState(config.currentDate);
+  const [autoDailyFolders,setAutoDailyFolders]=useState(config.autoDailyFolders!==false);
+  useEffect(()=>setCurrentDate(config.currentDate),[config.currentDate]);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(config.autoRefreshInterval);
   const [notificationSound, setNotificationSound] = useState(config.notificationSound || 'default');
   const [customSoundUrl, setCustomSoundUrl] = useState(config.customSoundUrl || '');
@@ -42,6 +44,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       ...config,
       basePath,
       currentDate,
+      autoDailyFolders,
       autoRefreshInterval,
       notificationSound,
       customSoundUrl,
@@ -106,6 +109,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
           <hr className="border-zinc-800" />
 
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-blue-950/30 border border-blue-700/40 text-sm text-slate-200">
+            <input type="checkbox" checked={autoDailyFolders} onChange={e=>setAutoDailyFolders(e.target.checked)} />
+            <span><strong className="block">تاريخ العمل تلقائي + إنشاء مجلدات الطابعات يومياً</strong>
+              <small className="block text-slate-400">يستخدم تاريخ كمبيوتر المطبعة بصيغة يوم-شهر-سنة، وينشئ مجلد done لكل طابعة دون حذف أي ملفات.</small></span>
+          </label>
+
           {/* Date & Auto Refresh */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
@@ -120,7 +129,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <input
                 type="text"
                 placeholder={t.datePlaceholder}
-                value={currentDate}
+                value={autoDailyFolders?config.currentDate:currentDate}
+                disabled={autoDailyFolders}
                 onChange={(e) => setCurrentDate(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-amber-200 font-mono focus:outline-none focus:border-secondary-500"
                 required
