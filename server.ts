@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
 import {listLedger,reconcileLedger,updateLedgerRow} from './src/server/productionLedger';
+import {ensureDailyPrinterFolders,localPrintDate} from './src/server/dailyPrinterFolders';
 import { attachManagementRoutes, resolveWhatsappCustomer } from './src/server/management';
 import { mountWhatsAppWebhook, mountIntakeRoutes } from './src/server/whatsapp';
 import { readServerSettings, writeServerSettings, readLocalState, writeLocalState } from './src/server/sqliteStore';
@@ -62,7 +63,7 @@ app.use('/api', management.guard);
 // Default configuration
 let serverConfig: ServerConfig = {
   basePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share', // Default Windows SMB/Network path
-  currentDate: `${new Date().getDate()}-${new Date().getMonth() + 1}`, // e.g., '22-7'
+  currentDate: localPrintDate(), // YYYY included to avoid annual folder collisions
   autoRefreshInterval: 5, // 5 seconds default
   isRealStorageAvailable: false,
   activePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`,
@@ -87,6 +88,33 @@ let serverConfig: ServerConfig = {
 };
 
 serverConfig = { ...serverConfig, ...readServerSettings() } as ServerConfig;
+// Enabled by default. Turning this off allows manually selecting earlier dates.
+serverConfig.autoDailyFolders = serverConfig.autoDailyFolders !== false;
+function syncDailyPrintFolders(){
+  if(!serverConfig.autoDailyFolders)return;
+  const today=localPrintDate();
+  if(serverConfig.currentDate!==today){
+    serverConfig.currentDate=today;
+    writeServerSettings(serverConfig as unknown as Record<string,unknown>);
+  }
+  try{
+    const folder=ensureDailyPrinterFolders(serverConfig.basePath,today,(serverConfig.printers||[]).map(p=>p.id));
+    serverConfig.activePath=folder;
+    serverConfig.isRealStorageAvailable=true;
+  }catch(error){
+    // Do not invent directories on missing shares. Report unavailable storage.
+    serverConfig.activePath=path.join(serverConfig.basePath,today);
+    serverConfig.isRealStorageAvailable=false;
+    if(lastFolderError!==String(error)){
+      lastFolderError=String(error);
+      console.warn('Daily printing folders unavailable:',error instanceof Error?error.message:'Unknown error');
+    }
+  }
+}
+let lastFolderError='';
+syncDailyPrintFolders();
+// Roll over even when no browser is open; system local date is authoritative.
+setInterval(syncDailyPrintFolders,60_000).unref();
 
 // In-memory overrides for real disk jobs
 let jobOverrides: Record<string, Partial<PrintJob>> = {};
@@ -500,6 +528,7 @@ app.post('/api/voice-notes/clear', (req: Request, res: Response) => {
 
 // API Routes
 app.get('/api/config', (req: Request, res: Response) => {
+  syncDailyPrintFolders();
   const isAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = isAvailable;
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
@@ -508,8 +537,9 @@ app.get('/api/config', (req: Request, res: Response) => {
 
 app.post('/api/config', async (req: Request, res: Response) => {
   const { basePath, currentDate, autoRefreshInterval, notificationSound, notificationColor, notificationDuration, disableMouseInDisplayMode, themeColor } = req.body;
+  if(req.body.autoDailyFolders!==undefined)serverConfig.autoDailyFolders=Boolean(req.body.autoDailyFolders);
   if (basePath !== undefined) serverConfig.basePath = basePath;
-  if (currentDate !== undefined) serverConfig.currentDate = currentDate;
+  if (currentDate !== undefined && !serverConfig.autoDailyFolders) serverConfig.currentDate = currentDate;
   if (autoRefreshInterval !== undefined) serverConfig.autoRefreshInterval = Number(autoRefreshInterval);
   if (notificationSound !== undefined) serverConfig.notificationSound = notificationSound;
   if (notificationColor !== undefined) serverConfig.notificationColor = notificationColor;
@@ -523,6 +553,7 @@ app.post('/api/config', async (req: Request, res: Response) => {
   if (req.body.departments !== undefined) serverConfig.departments = req.body.departments;
   if (req.body.printers !== undefined) serverConfig.printers = req.body.printers;
 
+  syncDailyPrintFolders();
   serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
   serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
 
@@ -592,6 +623,7 @@ app.patch('/api/management/ledger/:id',(req:Request,res:Response)=>{
 
 // GET /api/files - List files for selected date
 app.get('/api/files', (req: Request, res: Response) => {
+  syncDailyPrintFolders();
   const selectedDate = (req.query.date as string) || serverConfig.currentDate;
   const isReal = checkDiskStorage(serverConfig.basePath, selectedDate);
   if (isReal) {
