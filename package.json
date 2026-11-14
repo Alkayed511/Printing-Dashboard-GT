@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
-    "test:management": "node --experimental-strip-types src/utils/printMath.test.ts && node --experimental-strip-types src/server/sqliteStore.test.ts && node --experimental-strip-types src/utils/whatsapp.test.ts && node --experimental-strip-types src/server/intakeStore.test.ts && node --experimental-strip-types src/server/intakeLinks.test.ts"
+    "test:production": "node --experimental-strip-types src/utils/production.test.ts && node --experimental-strip-types src/server/serverConfig.test.ts && node --experimental-strip-types src/server/productionApi.test.ts",
+    "test:appearance": "node --experimental-strip-types src/utils/branding.test.ts",
+    "test:management": "node --experimental-strip-types src/utils/printMath.test.ts && node --experimental-strip-types src/server/sqliteStore.test.ts && node --experimental-strip-types src/utils/whatsapp.test.ts && node --experimental-strip-types src/server/intakeStore.test.ts && node --experimental-strip-types src/server/intakeLinks.test.ts && node --experimental-strip-types src/server/productionLedger.test.ts && node --experimental-strip-types src/utils/contactCsv.test.ts && node --experimental-strip-types src/utils/fetchProxy.test.ts && node --experimental-strip-types src/utils/serviceWorker.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

@@ -34,6 +34,7 @@ interface JobDetailsModalProps {
   basePath: string;
   currentDate: string;
   config: ServerConfig;
+  readOnly?: boolean;
 }
 
 export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
@@ -45,6 +46,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   basePath,
   currentDate,
   config,
+  readOnly = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<PrintJob>>({});
@@ -117,6 +119,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   if (!job) return null;
 
   const handleSave = () => {
+    if (readOnly) return;
     if (onUpdateJob && job) {
       onUpdateJob(job.id, editForm);
     }
@@ -160,7 +163,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-2xl w-full shadow-2xl text-zinc-100 max-h-[92vh] flex flex-col overflow-hidden">
-        <JobCustomerLink job={job} onLinked={() => onRefreshJobs?.()} />
+        {!readOnly && <JobCustomerLink job={job} onLinked={() => onRefreshJobs?.()} />}
         
         {/* Header */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60 shrink-0">
@@ -185,6 +188,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
           <div className="flex items-center gap-1.5 sm:gap-2">
             {!isEditing ? (
               <button 
+                disabled={readOnly}
                 onClick={() => setIsEditing(true)} 
                 className="text-zinc-400 hover:text-white p-2 sm:p-1 rounded-lg hover:bg-zinc-800 transition-colors min-h-[38px] min-w-[38px] flex items-center justify-center" 
                 title={isAr ? 'تعديل البيانات' : 'Edit Specs'}
@@ -448,7 +452,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
               {isAr ? 'إغلاق' : 'Close'}
             </button>
 
-            {isDone ? (
+            {!readOnly && (isDone ? (
               <button
                 onClick={() => {
                   onMoveJob(job.id, 'pending');
@@ -471,7 +475,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                 <span>{isAr ? 'اعتماد نقل الملف إلى (Done)' : 'Mark as Done'}</span>
                 <ArrowLeft className="w-4 h-4" />
               </button>
-            )}
+            ))}
           </div>
 
         </div>

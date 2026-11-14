@@ -28,6 +28,7 @@ export interface PrintJob {
   quantity?: number;
   customerName?: string;
   customerId?: string;
+  fileSignature?: string; // metadata key for reconciling renamed files in the print ledger
   notes?: string;
   previewColor?: string;
   priority?: JobPriority;
@@ -61,6 +62,34 @@ export interface ServerConfig {
   language?: 'ar' | 'en';
   departments?: Department[];
   printers?: Printer[];
+  production?: ProductionSettings;
+  branding?: BrandingSettings;
+}
+
+export interface BrandingSettings {
+  name: string;
+  tagline: string;
+  logo: string;
+  logoSize: number;
+  themeMode: 'dark' | 'light' | 'system';
+  accentColor: string;
+  textColor: string;
+  fontSize: number;
+  fontFamily: 'system' | 'tahoma' | 'arial';
+  corners: 'soft' | 'rounded' | 'sharp';
+  density: 'comfortable' | 'compact';
+  reduceMotion: boolean;
+}
+
+export interface ProductionSettings {
+  jobSort: 'priority' | 'oldest' | 'newest' | 'name';
+  printerSort: 'workload' | 'configured' | 'name';
+  defaultStatus: 'pending' | 'done' | 'all';
+  hideEmptyPrinters: boolean;
+  cardDensity: 'comfortable' | 'compact';
+  showSummary: boolean;
+  confirmFileMoves: boolean;
+  allowFileDeletion: boolean;
 }
 
 export interface VoiceNote {

@@ -1,0 +1,20 @@
+import {strict as assert} from 'node:assert';
+import {appearanceVariables, appearancePresets, brandingDefaults, resolveBranding, contrastRatio} from './branding.ts';
+import {validateBranding} from '../server/brandingConfig.ts';
+
+assert.deepEqual(resolveBranding(),brandingDefaults);
+assert.equal(resolveBranding({name:'مطبعة الاختبار'}).themeMode,'dark');
+assert.equal(brandingDefaults.name,'Golden Target','Resolving custom values does not change defaults');
+const light=appearanceVariables(resolveBranding({themeMode:'light'}),'light');
+const dark=appearanceVariables(resolveBranding(),'dark');
+assert.notEqual(light['--app-canvas'],dark['--app-canvas']);
+assert.ok(contrastRatio(light['--app-text'],light['--app-surface'])>=4.5);
+assert.ok(contrastRatio(dark['--app-text'],dark['--app-surface'])>=4.5);
+assert.ok(Math.abs(contrastRatio('#000000','#ffffff')-21)<.01);
+assert.equal(appearanceVariables(resolveBranding({textColor:'#887766',fontSize:20}),'dark')['--app-text'],'#887766');
+assert.equal(appearancePresets.some(preset=>preset.settings.name!==undefined||preset.settings.logo!==undefined),false,'Presets must not overwrite the business identity');
+const changed=validateBranding(undefined,{name:' مطبعة الاختبار ',themeMode:'light',fontSize:18,accentColor:'#325dce',logo:''});
+assert.equal(changed.name,'مطبعة الاختبار');assert.equal(changed.fontSize,18);
+for(const value of [{name:''},{fontSize:100},{fontSize:NaN},{logoSize:10},{themeMode:'invalid'},{fontFamily:'url(evil)'},{textColor:'red;display:none'},{accentColor:'bad'},{logo:'https://example.com/logo.png'},{logo:'data:image/svg+xml;base64,PHN2Zz4='},{logo:'data:image/png;base64,SGVsbG8='},{reduceMotion:'false'}])assert.throws(()=>validateBranding(changed,value));
+assert.equal(changed.name,'مطبعة الاختبار','Failed validation must not mutate saved settings');
+console.log('Brand identity validation, contrast, presets, and appearance tokens tests passed');

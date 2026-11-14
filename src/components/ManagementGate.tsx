@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Printer, ShieldCheck, Layers3, Calculator, UsersRound, AlertCircle } from 'lucide-react';
+import {useBranding} from './BrandingProvider';
+import BrandMark from './BrandMark';
 
 /** The entire legacy and management app stays protected behind the server session. */
 export default function ManagementGate({children}:{children:React.ReactNode}) {
+  const {branding} = useBranding();
   const [state,setState]=useState<'checking'|'login'|'ready'|'unconfigured'>('checking');
   const [password,setPassword]=useState('');
   const [showPassword,setShowPassword]=useState(false);
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
+
+  useEffect(() => {
+    const expired = () => {setState('login'); setPassword(''); setError('انتهت جلسة الدخول. سجّل دخولك مجددًا للمتابعة.');};
+    window.addEventListener('gt-session-expired', expired);
+    return () => window.removeEventListener('gt-session-expired', expired);
+  }, []);
 
   useEffect(()=>{
     fetch('/api/management/auth',{credentials:'same-origin',cache:'no-store'})
@@ -36,7 +45,7 @@ export default function ManagementGate({children}:{children:React.ReactNode}) {
   return <div className="gt-auth-screen" dir="rtl">
     <div className="gt-auth-grid">
       <aside className="gt-auth-story">
-        <div className="gt-auth-brand"><span className="gt-auth-brand-icon"><Printer size={27}/></span><span><strong>Golden Target</strong><small>PRINT MANAGEMENT PLATFORM</small></span></div>
+        <div className="gt-auth-brand"><BrandMark branding={branding}/><span><strong>{branding.name}</strong><small>{branding.tagline}</small></span></div>
         <div className="gt-auth-story-body">
           <span className="gt-auth-kicker"><span/> نظام إدارة متكامل للمطبعة</span>
           <h1>مطبعتك،<br/><em>تحت السيطرة.</em></h1>
@@ -45,11 +54,11 @@ export default function ManagementGate({children}:{children:React.ReactNode}) {
           <div className="gt-auth-feature"><span><Calculator size={19}/></span><div><b>التسعير الذكي</b><small>حساب الكميات والتكاليف وعروض الأسعار</small></div></div>
           <div className="gt-auth-feature"><span><UsersRound size={19}/></span><div><b>العملاء والحسابات</b><small>الفواتير والدفعات وكشوفات الحساب</small></div></div>
         </div>
-        <span className="gt-auth-story-footer">GOLDEN TARGET · PRINT OPERATIONS</span>
+        <span className="gt-auth-story-footer">{branding.name} · PRINT OPERATIONS</span>
       </aside>
       <main className="gt-auth-main">
         <div className="gt-auth-form-wrap">
-          <div className="gt-auth-mobile-brand"><Printer size={21}/> Golden Target</div>
+          <div className="gt-auth-mobile-brand"><BrandMark branding={branding}/> {branding.name}</div>
           <span className="gt-auth-greeting"><ShieldCheck size={17}/> مساحة عمل آمنة</span>
           <h2>{state==='unconfigured'?'إعداد الدخول مطلوب':'مرحباً بعودتك'}</h2>
           <p className="gt-auth-subtitle">{state==='unconfigured'?'لم يكتمل إعداد بيانات الدخول بعد.':'أدخل كلمة مرور الإدارة للوصول إلى مساحة عمل المطبعة.'}</p>
