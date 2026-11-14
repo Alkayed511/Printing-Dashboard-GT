@@ -150,6 +150,11 @@ export function attachManagementRoutes(app: Express) {
     res.set('Cache-Control','no-store');
     res.json({...data, invoices:data.invoices.map(i=>({...i,balance:invoiceBalance(i.id)}))});
   });
+  // OAuth client ID is public; never return a Google client secret or access token.
+  router.get('/google-contacts/config',(_req,res)=>{
+    res.set('Cache-Control','no-store');
+    res.json({clientId:process.env.GOOGLE_CONTACTS_CLIENT_ID||''});
+  });
   // Import phonebook CSV rows exported from the user's own device. Not a WhatsApp address-book API.
   router.post('/customers/contacts/import',(req,res)=>{
     try{
