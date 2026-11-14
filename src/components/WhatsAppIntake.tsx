@@ -1,7 +1,9 @@
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import { MessageCircle, UsersRound, Plus, Download, ArrowUpLeft, Search, RefreshCw, FilePlus2,
   Printer, PencilLine, Link2, Clock3, CheckCircle2, FolderOpen, Save, UserRoundPlus } from 'lucide-react';
-import {whatsappUrl} from '../utils/whatsapp';
+import {whatsappUrl,normalizeWhatsApp} from '../utils/whatsapp';
+import {parseContactsCsv} from '../utils/contactCsv';
+import {loadGoogleIdentity,requestGoogleContactsToken,fetchGoogleContacts} from '../utils/googleContacts';
 import type {PrintJob,ServerConfig} from '../types';
 import type {Customer,ManagementData} from '../types/management';
 import type {IncomingMessage,IntakeRequest,IntakeStatus} from '../server/intakeStore';
@@ -33,6 +35,10 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
   const [selectedMessage,setSelectedMessage]=useState('');
   const [selectedRequest,setSelectedRequest]=useState('');
   const [newCustomer,setNewCustomer]=useState({name:'',phone:''});
+  const [importSummary,setImportSummary]=useState('');
+  const [googleClientId,setGoogleClientId]=useState('');
+  const [googleReady,setGoogleReady]=useState(false);
+  const [googleProgress,setGoogleProgress]=useState('');
   const [newOrder,setNewOrder]=useState({customerId:'',title:'',notes:'',sourceMessageId:''});
   const [revision,setRevision]=useState({fileName:'',dimensions:'',printer:'',notes:''});
   const [linkSelection,setLinkSelection]=useState<string[]>([]);
@@ -52,6 +58,13 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
     setIntake(incoming);setCustomers(account.customers.filter(c=>!c.archived));
   },[]);
   useEffect(()=>{refresh().catch(e=>setError(String(e)));},[refresh]);
+  useEffect(()=>{
+    request<{clientId:string}>('/api/management/google-contacts/config').then(x=>{
+      if(!x.clientId)return;
+      setGoogleClientId(x.clientId);
+      loadGoogleIdentity().then(()=>setGoogleReady(true)).catch(()=>setGoogleReady(false));
+    }).catch(()=>{});
+  },[]);
 
   async function action(fn:()=>Promise<void>,success='تم الحفظ'){
     setBusy(true);setError('');setNotice('');
@@ -61,6 +74,8 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
   }
   const customerName=(id:string)=>customers.find(c=>c.id===id)?.name||'عميل غير مرتبط';
   const customerPhone=(id:string)=>customers.find(c=>c.id===id)?.whatsapp||customers.find(c=>c.id===id)?.phone||'';
+  const existingCustomer=customers.find(c=>Boolean(normalizeWhatsApp(newCustomer.phone))&&
+    (normalizeWhatsApp(c.whatsapp)===normalizeWhatsApp(newCustomer.phone)||normalizeWhatsApp(c.phone)===normalizeWhatsApp(newCustomer.phone)));
   const selectedMsg=intake.messages.find(m=>m.id===selectedMessage);
   const current=intake.requests.find(r=>r.id===selectedRequest);
   const activeLinks=current?.linkedFiles||[];
@@ -115,10 +130,76 @@ export default function WhatsAppIntake({jobs,config,onRefreshJobs}:Props){
       <div className="flex flex-col sm:flex-row gap-2">
         <input className={control} aria-label="اسم العميل" placeholder="اسم العميل أو الشركة" value={newCustomer.name} onChange={e=>setNewCustomer(s=>({...s,name:e.target.value}))}/>
         <input className={control} dir="ltr" aria-label="رقم واتساب" placeholder="+96279..." value={newCustomer.phone} onChange={e=>setNewCustomer(s=>({...s,phone:e.target.value}))}/>
-        <button disabled={busy||!newCustomer.name.trim()} className={primary+' whitespace-nowrap'} onClick={()=>action(async()=>{
+        <button disabled={busy||!newCustomer.name.trim()||!!existingCustomer} className={primary+' whitespace-nowrap'} onClick={()=>action(async()=>{
           const saved=await request<Customer>('/api/management/customers','POST',{name:newCustomer.name,phone:newCustomer.phone,whatsapp:newCustomer.phone,contact:'',email:'',address:'',taxNumber:'',category:'',paymentTerms:'',creditLimit:0,notes:''});
           setNewCustomer({name:'',phone:''});setNewOrder(s=>({...s,customerId:saved.id}));
         },'تمت إضافة العميل')}>حفظ العميل</button>
+      </div>
+      {existingCustomer&&<p className="text-amber-300 text-sm mt-2">رقم الهاتف مرتبط بالعميل {existingCustomer.name}.
+        <button className={btn+' mx-2'} onClick={()=>setNewOrder(v=>({...v,customerId:existingCustomer.id}))}>اختيار العميل الموجود</button>
+      </p>}
+      <div className="mt-4 rounded-xl border border-slate-700 p-3 space-y-2">
+        <div className="rounded-xl border border-blue-800/60 bg-blue-950/20 p-3 space-y-2">
+          <h4 className="text-sm font-bold">مزامنة جهات اتصال Google مباشرة</h4>
+          <p className="text-xs text-slate-300">اربط حساب Google بموافقتك، واسحب الأسماء والأرقام إلى قاعدة العملاء. المطابقة بالرقم أولاً، دون حذف أو استبدال بيانات العملاء القديمة. هذه مزامنة باتجاه واحد عند الضغط، وليست مزامنة خلفية تلقائية.</p>
+          <button type="button" className={primary+' w-full'} disabled={busy||!googleReady} onClick={()=>{
+            if(!googleClientId||!googleReady){setError('أضف GOOGLE_CONTACTS_CLIENT_ID إلى .env وأعد تشغيل البرنامج');return;}
+            // Open the Google popup immediately within the click event.
+            let consent:Promise<string>;
+            try{consent=requestGoogleContactsToken(googleClientId);}
+            catch(e){setError(e instanceof Error?e.message:String(e));return;}
+            setBusy(true);setError('');setImportSummary('');setGoogleProgress('تأكيد صلاحية القراءة من Google...');
+            void (async()=>{
+              try{
+                const token=await consent;
+                setGoogleProgress('جلب أسماء وأرقام Google Contacts...');
+                const contacts=await fetchGoogleContacts(token);
+                if(!contacts.length){setImportSummary('لم يُعثر على جهات اتصال فيها أسماء وأرقام.');return;}
+                let added=0,matched=0,review=0,invalid=0;
+                const warnings:string[]=[];
+                for(let i=0;i<contacts.length;i+=200){
+                  setGoogleProgress('مزامنة '+Math.min(i+200,contacts.length)+' من '+contacts.length+'...');
+                  const data=await request<{results:{name:string;phone:string;result:string}[]}>('/api/management/customers/contacts/import','POST',{contacts:contacts.slice(i,i+200)});
+                  for(const entry of data.results){
+                    if(entry.result==='تمت الإضافة')added++;
+                    else if(entry.result==='موجود حسب الرقم')matched++;
+                    else if(entry.result.includes('راجع يدوياً')){review++;if(warnings.length<8)warnings.push(entry.name+' ('+entry.phone+')');}
+                    else invalid++;
+                  }
+                }
+                await refresh();
+                setImportSummary('Google: أضيف '+added+' عميل، موجود '+matched+'، للمراجعة '+review+'، بيانات غير مكتملة '+invalid+
+                  (warnings.length?' | مراجعة: '+warnings.join('، '):''));
+              }catch(e){setError(e instanceof Error?e.message:String(e));}
+              finally{setBusy(false);setGoogleProgress('');}
+            })();
+          }}>{busy?'جارٍ المزامنة...':'ربط Google ومزامنة جهات الاتصال'}</button>
+          {!googleClientId&&<p className="text-xs text-amber-300">يلزم إعداد Google People API وOAuth Client ID أولاً. راجع docs/GOOGLE_CONTACTS_AR.md.</p>}
+          {googleClientId&&!googleReady&&<p className="text-xs text-amber-300">جارٍ تجهيز الربط مع Google أو تعذّر تحميله. حدّث الصفحة إن استمرت الرسالة.</p>}
+          {googleProgress&&<p className="text-xs text-blue-200" role="status">{googleProgress}</p>}
+        </div>
+        <h4 className="text-sm font-bold">استيراد أرقام عملاء المطبعة من CSV (بديل)</h4>
+        <p className="text-xs text-slate-400">يمكن استيراد ملف جهات اتصال الهاتف (Name, Phone). الأرقام المكررة تُطابق مع العملاء الحاليين، والأسماء المتعارضة تحتاج إلى مراجعة.</p>
+        <input type="file" accept=".csv,text/csv" disabled={busy} aria-label="CSV جهات الاتصال" className="text-sm w-full"
+          onChange={async e=>{
+            const file=e.target.files?.[0];
+            e.target.value='';
+            if(!file)return;
+            setBusy(true);setError('');setImportSummary('');
+            try {
+              const contacts=parseContactsCsv(await file.text());
+              if(!contacts.length)throw Error('الملف فارغ');
+              const result=await request<{results:{name:string;phone:string;result:string}[]}>('/api/management/customers/contacts/import','POST',{contacts});
+              await refresh();
+              const added=result.results.filter(x=>x.result==='تمت الإضافة').length;
+              const matched=result.results.filter(x=>x.result==='موجود حسب الرقم').length;
+              const review=result.results.filter(x=>x.result.includes('راجع يدوياً'));
+              setImportSummary('جديد: '+added+' | موجود: '+matched+' | مراجعة: '+review.length+
+                (review.length?' — '+review.slice(0,5).map(x=>x.name).join('، '):''));
+            }catch(err){setError(err instanceof Error?err.message:String(err));}
+            finally{setBusy(false);}
+          }}/>
+        {importSummary&&<p className="text-xs text-emerald-200" role="status">{importSummary}</p>}
       </div>
     </section>
 
