@@ -12,7 +12,7 @@ const reservation = createServer();
 await new Promise<void>(resolve => reservation.listen(0,'127.0.0.1',resolve));
 const port = (reservation.address() as {port:number}).port;
 await new Promise<void>(resolve => reservation.close(() => resolve()));
-const password = randomBytes(24).toString('hex');
+const password = '4826'; // Valid four-digit test PIN; isolated test process only.
 const processServer = spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'production',PORT:String(port),PRINT_DATA_DIR:path.join(folder,'database'),PRINT_ADMIN_PASSWORD:password,PRINT_SESSION_SECRET:randomBytes(48).toString('hex'),PRINT_ENABLE_LEGACY_FIRESTORE:'false',PRINT_SECURE_COOKIES:'false'},stdio:'ignore',windowsHide:true});
 const base = `http://127.0.0.1:${port}`;
 let cookie = '';
@@ -26,7 +26,7 @@ try {
   const storage=path.join(folder,'storage');const date='30-10';const printer=path.join(storage,date,'eco');
   fs.mkdirSync(printer,{recursive:true}); fs.writeFileSync(path.join(printer,'fixture.pdf'),'TEST ONLY');
   const printers=[{id:'eco',name:'Test printer',departmentId:'test'},{id:'flat small',name:'Flat Small',departmentId:'test'}];
-  const saved=await request('/api/config',{basePath:storage,currentDate:date,departments:[{id:'test',name:'Test'}],printers,production:{jobSort:'priority',confirmFileMoves:true,allowFileDeletion:false}});
+  const saved=await request('/api/config',{basePath:storage,currentDate:date,autoDailyFolders:false,departments:[{id:'test',name:'Test'}],printers,production:{jobSort:'priority',confirmFileMoves:true,allowFileDeletion:false}});
   assert.equal(saved.status,200);assert.equal(fs.statSync(path.join(printer,'done')).isDirectory(),true);
   assert.equal(fs.statSync(path.join(storage,date,'flat small','done')).isDirectory(),true);
   assert.equal(fs.readFileSync(path.join(printer,'fixture.pdf'),'utf8'),'TEST ONLY');

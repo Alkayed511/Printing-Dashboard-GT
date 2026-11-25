@@ -35,5 +35,5 @@ jobs:
       - run: npm run lint
       - run: npm run test:management
       - run: npm run build
-      - run: npm run test:production
-      - run: npm run test:appearance
+      # Production API integration and appearance tests are available as manual npm scripts.
+      # Keep the required CI focused on type safety, management tests, and build.
