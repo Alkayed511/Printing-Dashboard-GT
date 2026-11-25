@@ -19,7 +19,7 @@ type Props = {
   onBeforeLogout: () => boolean;
 };
 type NavItem = {tab: WorkspaceTab; ar: string; en: string; icon: LucideIcon};
-const sections: {ar: string; en: string; items: NavItem[]}[] = [
+const sections: {key: string; ar: string; en: string; items: NavItem[]}[] = [
   {key: 'workspace', ar: 'مساحة العمل', en: 'WORKSPACE', items: [
     {tab: 'home', ar: 'نظرة عامة', en: 'Overview', icon: LayoutDashboard},
     {tab: 'kanban', ar: 'الإنتاج والطباعة', en: 'Production', icon: KanbanSquare},
@@ -55,8 +55,6 @@ export default function ModernWorkspaceShell({
   children, onSelectJob
 }: Props) {
   const [mobileOpen,setMobileOpen] = useState(false);
-  const [searchOpen,setSearchOpen] = useState(false);
-  const [toolsOpen,setToolsOpen] = useState(false);
   const [,setIsMobile] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -70,13 +68,11 @@ export default function ModernWorkspaceShell({
   }, []);
   useEffect(() => {if (mobileOpen) closeButton.current?.focus();}, [mobileOpen]);
   useEffect(() => {
-    const updateOnline = () => setOnline(navigator.onLine);
     const onKey = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && enabled) {event.preventDefault(); setSearchOpen(value => !value);}
-      if (event.key === 'Escape') {setMobileOpen(false); setToolsOpen(false); menuButton.current?.focus();}
+      if (event.key === 'Escape') {setMobileOpen(false); menuButton.current?.focus();}
     };
-    window.addEventListener('online', updateOnline); window.addEventListener('offline', updateOnline); window.addEventListener('keydown', onKey);
-    return () => {window.removeEventListener('online', updateOnline); window.removeEventListener('offline', updateOnline); window.removeEventListener('keydown', onKey);};
+    window.addEventListener('keydown', onKey);
+    return () => {window.removeEventListener('keydown', onKey);};
   }, [enabled]);
   if (!enabled) return <>{children}</>;
 
@@ -157,7 +153,6 @@ export default function ModernWorkspaceShell({
         <div className="gt-page">{children}</div>
       </div>
     </div>
-    <WorkspaceSearch open={searchOpen} onClose={() => setSearchOpen(false)} jobs={jobs} destinations={sections.flatMap(section => section.items).map(item => ({tab: item.tab, label: tx(item.ar, item.en)}))} onNavigate={navigate} onSelectJob={onSelectJob} isAr={isAr}/>
     </> 
   );
 }
