@@ -449,5 +449,5 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </form>
       </div>
     </div>
-  </div>;
+  );
 };

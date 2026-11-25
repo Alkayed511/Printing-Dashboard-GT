@@ -546,43 +546,7 @@ app.get('/api/config', (req: Request, res: Response) => {
 });
 
 app.post('/api/config', async (req: Request, res: Response) => {
-  const { basePath, currentDate, autoRefreshInterval, notificationSound, notificationColor, notificationDuration, disableMouseInDisplayMode, themeColor } = req.body;
-  if(req.body.autoDailyFolders!==undefined)serverConfig.autoDailyFolders=Boolean(req.body.autoDailyFolders);
-  if (basePath !== undefined) serverConfig.basePath = basePath;
-  if (currentDate !== undefined && !serverConfig.autoDailyFolders) serverConfig.currentDate = currentDate;
-  if (autoRefreshInterval !== undefined) serverConfig.autoRefreshInterval = Number(autoRefreshInterval);
-  if (notificationSound !== undefined) serverConfig.notificationSound = notificationSound;
-  if (notificationColor !== undefined) serverConfig.notificationColor = notificationColor;
-  if (notificationDuration !== undefined) serverConfig.notificationDuration = Number(notificationDuration);
-  if (disableMouseInDisplayMode !== undefined) serverConfig.disableMouseInDisplayMode = Boolean(disableMouseInDisplayMode);
-  if (themeColor !== undefined) serverConfig.themeColor = themeColor;
-  if (req.body.secondaryColor !== undefined) serverConfig.secondaryColor = req.body.secondaryColor;
-  if (req.body.customSoundUrl !== undefined) serverConfig.customSoundUrl = req.body.customSoundUrl;
-  if (req.body.language !== undefined) serverConfig.language = req.body.language;
-  if (req.body.localIp !== undefined) serverConfig.localIp = req.body.localIp;
-  if (req.body.departments !== undefined) serverConfig.departments = req.body.departments;
-  if (req.body.printers !== undefined) serverConfig.printers = req.body.printers;
-
-  syncDailyPrintFolders();
-  serverConfig.activePath = path.join(serverConfig.basePath, serverConfig.currentDate);
-  serverConfig.isRealStorageAvailable = checkDiskStorage(serverConfig.basePath, serverConfig.currentDate);
-
-  // If real path exists, create printer folders if missing
-  if (serverConfig.isRealStorageAvailable) {
-    try {
-      const dateDir = serverConfig.activePath;
-      if (!fs.existsSync(dateDir)) {
-        fs.mkdirSync(dateDir, { recursive: true });
-      }
-      const printerIds = serverConfig.printers?.map(p => p.id) || [];
-      printerIds.forEach((p) => {
-        const printerDir = path.join(dateDir, p);
-        const doneDir = path.join(printerDir, 'done');
-        if (!fs.existsSync(printerDir)) fs.mkdirSync(printerDir, { recursive: true });
-        if (!fs.existsSync(doneDir)) fs.mkdirSync(doneDir, { recursive: true });
-      });
-    } catch (err) {
-      console.error('Error creating network folder structure:', err);
+  const previousConfig = serverConfig;
   let candidate: ServerConfig;
   try {candidate = updateServerConfig(serverConfig, req.body);}
   catch (error) {res.status(400).json({error: error instanceof Error ? error.message : 'إعدادات غير صالحة'}); return;}
@@ -600,6 +564,7 @@ app.post('/api/config', async (req: Request, res: Response) => {
   try {writeServerSettings(candidate as unknown as Record<string,unknown>);}
   catch {res.status(500).json({error:'تعذّر حفظ الإعدادات. بقيت الإعدادات السابقة فعّالة.'}); return;}
   serverConfig = candidate;
+  syncDailyPrintFolders();
   if (db && process.env.PRINT_ENABLE_LEGACY_FIRESTORE === 'true') setDoc(doc(db, 'settings', 'global'), serverConfig).catch(() => console.error('Legacy settings sync failed'));
   res.json({ success: true, createdFolders, config: { ...serverConfig, localIp: getLocalIp() } });
 });

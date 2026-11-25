@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard, KanbanSquare, UsersRound, BarChart3, MessageCircle, ClipboardList,
   Settings2, Printer, Menu, X, ChevronLeft, ChevronRight, RefreshCcw,
@@ -20,13 +20,13 @@ type Props = {
 };
 type NavItem = {tab: WorkspaceTab; ar: string; en: string; icon: LucideIcon};
 const sections: {ar: string; en: string; items: NavItem[]}[] = [
-  {ar: 'مساحة العمل', en: 'WORKSPACE', items: [
+  {key: 'workspace', ar: 'مساحة العمل', en: 'WORKSPACE', items: [
     {tab: 'home', ar: 'نظرة عامة', en: 'Overview', icon: LayoutDashboard},
     {tab: 'kanban', ar: 'الإنتاج والطباعة', en: 'Production', icon: KanbanSquare},
     {tab: 'intake', ar: 'الطلبات والتصاميم', en: 'Design requests', icon: MessageCircle},
     {tab: 'ledger', ar: 'سجل ملفات الطباعة', en: 'Print file ledger', icon: ClipboardList},
   ]},
-  {ar: 'إدارة المطبعة', en: 'MANAGEMENT', items: [
+  {key: 'management', ar: 'إدارة المطبعة', en: 'MANAGEMENT', items: [
     {tab: 'customers', ar: 'العملاء والحسابات', en: 'Customers & accounts', icon: UsersRound},
     {tab: 'stats', ar: 'التقارير والإحصائيات', en: 'Reports & analytics', icon: BarChart3},
     {tab: 'management', ar: 'الأقسام والطابعات', en: 'Departments & printers', icon: Printer},
@@ -52,9 +52,14 @@ const hints: Record<WorkspaceTab, {ar:string;en:string}> = {
 export default function ModernWorkspaceShell({
   enabled, activeTab, onNavigate, config, jobs, pendingAlerts,
   isRefreshing, onRefresh, onExport, onChangeDepartment, myDepartment,
-  advancedTools, children
+  children, onSelectJob
 }: Props) {
   const [mobileOpen,setMobileOpen] = useState(false);
+  const [searchOpen,setSearchOpen] = useState(false);
+  const [toolsOpen,setToolsOpen] = useState(false);
+  const [,setIsMobile] = useState(false);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
   const isAr = config.language !== 'en';
   const tx = (ar: string, en: string) => isAr ? ar : en;
   useEffect(() => {
@@ -87,6 +92,7 @@ export default function ModernWorkspaceShell({
   const navigate = (tab:WorkspaceTab) => {onNavigate(tab);setMobileOpen(false);};
 
   return (
+    <>
     <div className="gt-shell" dir={isAr?'rtl':'ltr'}>
       {mobileOpen && <button type="button" className="gt-sidebar-scrim" aria-label={tx('إغلاق القائمة','Close menu')} onClick={()=>setMobileOpen(false)} />}
       <aside className={'gt-sidebar'+(mobileOpen?' gt-sidebar-open':'')} aria-label={tx('قائمة التنقل الرئيسية','Main navigation')}>
@@ -152,5 +158,6 @@ export default function ModernWorkspaceShell({
       </div>
     </div>
     <WorkspaceSearch open={searchOpen} onClose={() => setSearchOpen(false)} jobs={jobs} destinations={sections.flatMap(section => section.items).map(item => ({tab: item.tab, label: tx(item.ar, item.en)}))} onNavigate={navigate} onSelectJob={onSelectJob} isAr={isAr}/>
-  </div>;
+    </> 
+  );
 }
