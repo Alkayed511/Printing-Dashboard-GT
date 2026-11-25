@@ -17,6 +17,7 @@ export type PrintLedgerRow = {
   priceJod:number|null; paidJod:number|null; notes:string; updatedAt:string;
 };
 let connection:DatabaseSync|undefined;
+export function closeProductionLedger() {connection?.close(); connection = undefined;}
 function db(){
   if(connection)return connection;
   const folder=path.resolve(process.env.PRINT_DATA_DIR||'.data');

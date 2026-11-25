@@ -10,30 +10,27 @@ import type { ServerConfig, PrintJob } from '../types';
 
 export type WorkspaceTab = 'home' | 'kanban' | 'customers' | 'intake' | 'ledger' | 'stats' | 'management' | 'settings';
 type Props = {
-  enabled: boolean;
-  activeTab: WorkspaceTab;
-  onNavigate: (tab: WorkspaceTab) => void;
-  config: ServerConfig;
-  jobs: PrintJob[];
-  pendingAlerts: number;
-  isRefreshing: boolean;
-  onRefresh: () => void;
-  onExport: () => void;
-  onChangeDepartment: () => void;
-  myDepartment: string | null;
-  advancedTools: ReactNode;
-  children: ReactNode;
+  enabled: boolean; activeTab: WorkspaceTab; onNavigate: (tab: WorkspaceTab) => void;
+  config: ServerConfig; jobs: PrintJob[]; pendingAlerts: number; isRefreshing: boolean;
+  onRefresh: () => void; onExport: () => void; onChangeDepartment: () => void;
+  onSelectJob: (job: PrintJob) => void; myDepartment: string | null;
+  children: ReactNode; lastSynced: Date | null; connectionError: string;
+  alerts: PrintJob[]; onDismissAlerts: () => void; onOpenAppearance: () => void; onOpenNotificationSettings: () => void;
+  onBeforeLogout: () => boolean;
 };
-
-type NavGroup = { key: string; ar: string; en: string; items: Array<{tab:WorkspaceTab;ar:string;en:string;icon:LucideIcon}> };
-const sections: NavGroup[] = [
-  {key: 'main', ar:'مساحة العمل', en:'WORKSPACE', items:[
-    {tab:'home', ar:'الرئيسية', en:'Overview', icon:LayoutDashboard},
-    {tab:'kanban', ar:'الإنتاج والطباعة', en:'Production', icon:KanbanSquare},
-    {tab:'customers', ar:'العملاء والحسابات', en:'Customers & accounts', icon:UsersRound},
-    {tab:'intake', ar:'واتساب واستلام التصاميم', en:'WhatsApp & intake', icon:MessageCircle},
-    {tab:'ledger', ar:'سجل ملفات الطباعة', en:'Print file ledger', icon:ClipboardList},
-    {tab:'stats', ar:'التقارير والإحصائيات', en:'Reports & analytics', icon:BarChart3}
+type NavItem = {tab: WorkspaceTab; ar: string; en: string; icon: LucideIcon};
+const sections: {ar: string; en: string; items: NavItem[]}[] = [
+  {ar: 'مساحة العمل', en: 'WORKSPACE', items: [
+    {tab: 'home', ar: 'نظرة عامة', en: 'Overview', icon: LayoutDashboard},
+    {tab: 'kanban', ar: 'الإنتاج والطباعة', en: 'Production', icon: KanbanSquare},
+    {tab: 'intake', ar: 'الطلبات والتصاميم', en: 'Design requests', icon: MessageCircle},
+    {tab: 'ledger', ar: 'سجل ملفات الطباعة', en: 'Print file ledger', icon: ClipboardList},
+  ]},
+  {ar: 'إدارة المطبعة', en: 'MANAGEMENT', items: [
+    {tab: 'customers', ar: 'العملاء والحسابات', en: 'Customers & accounts', icon: UsersRound},
+    {tab: 'stats', ar: 'التقارير والإحصائيات', en: 'Reports & analytics', icon: BarChart3},
+    {tab: 'management', ar: 'الأقسام والطابعات', en: 'Departments & printers', icon: Printer},
+    {tab: 'settings', ar: 'الإعدادات', en: 'Settings', icon: Settings2},
   ]},
   {key:'system', ar:'النظام', en:'SYSTEM', items:[
     {tab:'management', ar:'الأقسام والطابعات', en:'Departments & printers', icon:Printer},
@@ -59,7 +56,23 @@ export default function ModernWorkspaceShell({
 }: Props) {
   const [mobileOpen,setMobileOpen] = useState(false);
   const isAr = config.language !== 'en';
-  const tx = (ar:string,en:string) => isAr ? ar : en;
+  const tx = (ar: string, en: string) => isAr ? ar : en;
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)');
+    const update = () => {setIsMobile(media.matches); if (!media.matches) setMobileOpen(false);};
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {if (mobileOpen) closeButton.current?.focus();}, [mobileOpen]);
+  useEffect(() => {
+    const updateOnline = () => setOnline(navigator.onLine);
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && enabled) {event.preventDefault(); setSearchOpen(value => !value);}
+      if (event.key === 'Escape') {setMobileOpen(false); setToolsOpen(false); menuButton.current?.focus();}
+    };
+    window.addEventListener('online', updateOnline); window.addEventListener('offline', updateOnline); window.addEventListener('keydown', onKey);
+    return () => {window.removeEventListener('online', updateOnline); window.removeEventListener('offline', updateOnline); window.removeEventListener('keydown', onKey);};
+  }, [enabled]);
   if (!enabled) return <>{children}</>;
 
   const current = sections.flatMap(s=>s.items).find(x=>x.tab===activeTab);
@@ -138,5 +151,6 @@ export default function ModernWorkspaceShell({
         <div className="gt-page">{children}</div>
       </div>
     </div>
-  );
+    <WorkspaceSearch open={searchOpen} onClose={() => setSearchOpen(false)} jobs={jobs} destinations={sections.flatMap(section => section.items).map(item => ({tab: item.tab, label: tx(item.ar, item.en)}))} onNavigate={navigate} onSelectJob={onSelectJob} isAr={isAr}/>
+  </div>;
 }

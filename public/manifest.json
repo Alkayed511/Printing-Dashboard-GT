@@ -1,6 +1,6 @@
 {
-  "short_name": "لوحة الطباعة",
-  "name": "نظام تتبع أوامر الطباعة - Printshop Kanban",
+  "short_name": "Golden Target",
+  "name": "Golden Target | إدارة المطبعة",
   "icons": [
     {
       "src": "/icon.svg",
@@ -22,8 +22,8 @@
     }
   ],
   "start_url": "/",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#10141b",
+  "theme_color": "#141920",
   "display": "standalone",
   "orientation": "any",
   "dir": "rtl",

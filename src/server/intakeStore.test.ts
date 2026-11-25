@@ -2,7 +2,7 @@ import {strict as assert} from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {storeIncoming,incomingMessages,createRequest,getRequest,updateRequest,listRequests,newId} from './intakeStore.ts';
+import {storeIncoming,incomingMessages,createRequest,getRequest,updateRequest,listRequests,newId,closeIntakeStore} from './intakeStore.ts';
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'gt-intake-test-'));
 process.env.PRINT_DATA_DIR=folder;
 try {
@@ -24,4 +24,9 @@ try {
   assert.equal(changed.linkedJobId,'machine-file-id-123');
   assert.equal(listRequests().length,1);
   console.log('WhatsApp intake persistence & revision tests passed');
-} finally { fs.rmSync(folder,{recursive:true,force:true}); }
+} finally {
+  closeIntakeStore();
+  assert.equal(path.dirname(path.resolve(folder)), path.resolve(os.tmpdir()));
+  assert.ok(path.basename(folder).startsWith('gt-intake-test-'));
+  fs.rmSync(folder,{recursive:true,force:true});
+}

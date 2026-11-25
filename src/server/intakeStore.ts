@@ -19,6 +19,7 @@ export type IntakeRequest = {
   revisions: Revision[]; createdAt: string; updatedAt: string;
 };
 let db: DatabaseSync | undefined;
+export function closeIntakeStore() {db?.close(); db = undefined;}
 function open() {
   if (db) return db;
   const folder = path.resolve(process.env.PRINT_DATA_DIR || '.data');

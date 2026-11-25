@@ -2,7 +2,7 @@ import {strict as assert} from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {listLedger,reconcileLedger,updateLedgerRow} from './productionLedger.ts';
+import {listLedger,reconcileLedger,updateLedgerRow,closeProductionLedger} from './productionLedger.ts';
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'gt-print-ledger-'));
 process.env.PRINT_DATA_DIR=folder;
 try{
@@ -32,4 +32,9 @@ try{
   assert.equal(listLedger()[0].quantity,3,'Manual quantity retained across renames');
   assert.equal(listLedger()[0].paidJod,5);
   console.log('Print ledger monitoring, rename retention and financial fields tests passed');
-}finally{fs.rmSync(folder,{force:true,recursive:true});}
+}finally{
+  closeProductionLedger();
+  assert.equal(path.dirname(path.resolve(folder)), path.resolve(os.tmpdir()));
+  assert.ok(path.basename(folder).startsWith('gt-print-ledger-'));
+  fs.rmSync(folder,{force:true,recursive:true});
+}

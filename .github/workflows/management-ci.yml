@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/**'
+      - 'index.html'
+      - 'public/**'
       - 'server.ts'
       - 'package.json'
       - 'bun.lock'
@@ -11,6 +13,8 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'index.html'
+      - 'public/**'
       - 'server.ts'
       - 'package.json'
       - 'bun.lock'
@@ -31,3 +35,5 @@ jobs:
       - run: npm run lint
       - run: npm run test:management
       - run: npm run build
+      - run: npm run test:production
+      - run: npm run test:appearance
