@@ -4,13 +4,15 @@ import path from 'node:path';
 
 export function localPrintDate(date=new Date()):string {
   const pad=(n:number)=>String(n).padStart(2,'0');
-  return [pad(date.getDate()),pad(date.getMonth()+1),date.getFullYear()].join('-');
+  return [pad(date.getDate()),pad(date.getMonth()+1)].join('-');
 }
 export function ensureDailyPrinterFolders(basePath:string,date:string,printerIds:string[]):string{
   if(!path.isAbsolute(basePath)||!fs.existsSync(basePath)||!fs.statSync(basePath).isDirectory())
     throw Error('المسار الأساسي للطباعة غير موجود أو غير متاح. اضبط مجلد الطباعة الصحيح أولاً.');
-  if(!/^\d{2}-\d{2}-\d{4}$/.test(date))throw Error('تاريخ مجلد الطباعة غير صالح');
-  const [d,m,y]=date.split('-').map(Number);
+  if(!/^\d{2}-\d{2}(?:-\d{4})?$/.test(date))throw Error('تاريخ مجلد الطباعة غير صالح');
+  const parts=date.split('-').map(Number);
+  const [d,m]=parts;
+  const y=parts[2]??new Date().getFullYear();
   const verify=new Date(y,m-1,d);
   if(verify.getDate()!==d||verify.getMonth()!==m-1||verify.getFullYear()!==y)throw Error('تاريخ غير صالح');
   const cleanIds=[...new Set(printerIds)];
