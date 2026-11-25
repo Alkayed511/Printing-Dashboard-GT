@@ -442,12 +442,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
           
           <hr className="border-zinc-800" />
+          {saveError && <p role="alert" className="text-red-400 font-semibold mb-3">{saveError}</p>}
           <div className="pt-6 flex items-center justify-end border-t border-zinc-800">
             <button
               type="submit"
+              disabled={isSaving}
               className="flex items-center gap-2 bg-secondary-600 hover:bg-secondary-500 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-secondary-600/20 transition-all text-sm"
             >
-              {isSaved ? (
+              {isSaving ? <span>جارٍ حفظ الإعدادات...</span> : isSaved ? (
                 <>
                   <CheckCircle2 className="w-5 h-5 text-emerald-300" />
                   <span>{t.saveSuccess}</span>
