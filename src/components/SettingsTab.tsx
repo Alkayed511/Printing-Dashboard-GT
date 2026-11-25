@@ -8,12 +8,14 @@ const samplePrinters = ['eco', 'solvint', 'r2r'];
 
 interface SettingsTabProps {
   config: ServerConfig;
-  onSaveConfig: (cfg: ServerConfig) => void;
+  onSaveConfig: (cfg: ServerConfig) => Promise<boolean>;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   config,
   onSaveConfig,
+  onDirtyChange,
 }) => {
   const [basePath, setBasePath] = useState(config.basePath);
   const [currentDate, setCurrentDate] = useState(config.currentDate);
@@ -30,6 +32,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [language, setLanguage] = useState(config.language || 'ar');
   const [localIp, setLocalIp] = useState(config.localIp || '');
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('primary-orange', 'primary-blue', 'primary-green', 'primary-purple', 'primary-rose');
@@ -38,9 +42,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     root.classList.add(`secondary-${secondaryColor || 'blue'}`);
   }, [themeColor, secondaryColor]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSaveConfig({
+    if (isSaving) return;
+    setIsSaving(true);
+    setSaveError('');
+    setIsSaved(false);
+    try {
+      await onSaveConfig({
       ...config,
       basePath,
       currentDate,
@@ -55,10 +64,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       secondaryColor,
       language,
       localIp,
-    });
-    
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+      });
+      setIsSaved(true);
+      onDirtyChange?.(false);
+      setTimeout(() => setIsSaved(false), 2000);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'تعذّر حفظ الإعدادات');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const t = translations[language];
@@ -80,7 +94,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* Body Form */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-8">
+        <form onSubmit={handleSubmit} onChange={() => {setIsSaved(false); onDirtyChange?.(true);}} className="p-6 sm:p-8 space-y-8">
           
           {/* Base Path Input */}
           <div className="space-y-3">
