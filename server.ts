@@ -73,7 +73,7 @@ app.use('/api', management.guard);
 // Default configuration
 let serverConfig: ServerConfig = {
   basePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share', // Default Windows SMB/Network path
-  currentDate: localPrintDate(), // YYYY included to avoid annual folder collisions
+  currentDate: localPrintDate(), // Match existing DD-MM production folders
   autoRefreshInterval: 5, // 5 seconds default
   isRealStorageAvailable: false,
   activePath: 'C:\\Users\\gt511\\OneDrive\\Desktop\\share\\' + `${new Date().getDate()}-${new Date().getMonth() + 1}`,
