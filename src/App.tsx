@@ -4,7 +4,6 @@ import WorkspaceOverview from './components/WorkspaceOverview';
 import { PrintJob, PrinterType, FileStatus, ServerConfig } from './types';
 import { translations } from './translations';
 import { DepartmentSelector } from './components/DepartmentSelector';
-import { DisplayVoiceAnnouncer } from './components/DisplayVoiceAnnouncer';
 import { playNotificationSound } from './utils/audio';
 import {productionSettings} from './utils/production';
 import {useBranding} from './components/BrandingProvider';
@@ -364,7 +363,6 @@ export default function App() {
         />
       ) : (
       <div className={`h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex flex-col gt-app selection:bg-secondary-500 selection:text-white ${config.language === 'en' ? 'dir-ltr text-left' : 'dir-rtl text-right'} ${isDisplayMode ? 'select-none' : ''}`}>
-      <DisplayVoiceAnnouncer myDepartment={myDepartment} language={config.language || 'ar'} />
       <ModernWorkspaceShell
         enabled={!isDisplayMode}
         activeTab={activeTab}

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ServerConfig, Department, Printer } from '../types';
 import { Plus, Edit2, Trash2, Printer as PrinterIcon, LayoutDashboard, Save, X, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { PushToTalk } from './PushToTalk';
 
 interface ManagementTabProps {
   config: ServerConfig;
@@ -135,8 +134,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({ config, onSaveConf
     <div className={`max-w-5xl mx-auto p-4 sm:p-6 space-y-6 ${isAr ? 'dir-rtl' : 'dir-ltr'}`}>
       {saveError && <p role="alert" className="gt-settings-error">{saveError}</p>}
       {saving && <p role="status" className="text-sm text-amber-200">{isAr ? 'جارٍ حفظ التعديلات…' : 'Saving changes…'}</p>}
-      {/* Live Voice Broadcast / Push To Talk Section */}
-      <details className="gt-voice-settings"><summary>{isAr ? 'التواصل الصوتي بين الأقسام · اختياري' : 'Voice communication between departments · optional'}</summary><PushToTalk departments={departments} language={language} /></details>
 
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
